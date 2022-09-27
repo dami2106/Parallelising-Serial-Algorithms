@@ -3,35 +3,43 @@
  */
 #include <iostream>
 #include <vector>
-#include <array>
 #include <random>
-//#include <omp.h>
+#include <omp.h>
+
+#define NUMTHREADS 8
 
 std::vector<int> generateArray(int N);
 void fullScan(std::vector<int> &in, std::vector<int> &out, int N);
 void ompFullScan(std::vector<int> &in, int N);
 bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N);
 
-int main() {
-    const int N = 8;
-    std::vector<int> in;
+int main(int argc, char *argv[]) {
+    int N = (int) pow(2, atoi(argv[1]));
+    int iter = atoi(argv[2]);
+    double startTime, sRunTime = 0, pRunTime = 0;
 
-    in.push_back(2);
-    in.push_back(1);
-    in.push_back(4);
-    in.push_back(0);
-    in.push_back(3);
-    in.push_back(7);
-    in.push_back(6);
-    in.push_back(3);
+    for (int z = 0; z < iter; z++) {
+        std::vector<int> in = generateArray(N);
+        std::vector<int> out(N, 0);
 
-    for(int c : in)
-        std::cout << c << " ";
-    std::cout << "\n";
-    ompFullScan(in, N);
-    for(int c : in)
-        std::cout << c << " ";
-    std::cout << "\n";
+        startTime = omp_get_wtime();
+        fullScan(in, out, N);
+        sRunTime += omp_get_wtime() - startTime;
+
+        startTime = omp_get_wtime();
+        ompFullScan(in, N);
+        pRunTime += omp_get_wtime() - startTime;
+
+        if (!compareScan(in, out, N))
+            std::cout << "WRONG\n";
+    }
+
+
+    std::cout << "Parallel FS gets: " << pRunTime / iter << "\nSerial FS gets: " << sRunTime / iter
+              << "\nWith a speed-up of: " << sRunTime / pRunTime << std::endl;
+    std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
+    std::cout << "Running on " << NUMTHREADS << " threads\n";
+
     return 0;
 }
 
@@ -64,43 +72,40 @@ void fullScan(std::vector<int> &in, std::vector<int> &out, int N) {
  * A function that performs a parallel full scan on the given array
  */
 void ompFullScan(std::vector<int> &in, int N) {
-    for (int d = 0 ; d < (int)log2(N)  ; d++) {
-        int inc = (int)pow(2, d+1);
-        for(int k = 0 ; k < N-1 ; k += inc) {
-            int ind1 = k + inc - 1;
-            int ind2 = k + (int)pow(2, d) - 1;
+    for (int d = 0; d < log2(N); d++) {
+        int inc = (int) pow(2, d + 1);
 
-            if(ind1 < N && ind2 < N)
-                in[ind1] += in[ind2];
-
+#pragma omp parallel for
+        for (int k = 0; k < N; k += inc) {
+            in[k + inc - 1] += in[k + (int) pow(2, d) - 1];
         }
     }
 
+    int end = in[N - 1];
+    in[N - 1] = 0;
 
-    int temp=in[N-1];
-    in[N-1]= 0;
 
-
-    for (int  d = log2(N)-1 ;  d >=0 ; -- d) {
-;
-        for (int i = 0; i <=N-1 ; i+= pow(2,d+1)) {
-            int t = in[i + pow(2,d)-1] ;
-            in[i + pow(2,d)-1] =in[i + pow(2,d+1)-1];
-            in[i + pow(2,d+1)-1] = t + in[i + pow(2,d+1)-1];
-
+    for (int d = log2(N) - 1; d >= 0; --d) {
+        int inc = (int) pow(2, d + 1);
+#pragma omp parallel for
+        for (int i = 0; i < N; i += inc) {
+            int t = in[i + pow(2, d) - 1];
+            in[i + pow(2, d) - 1] = in[i + pow(2, d + 1) - 1];
+            in[i + pow(2, d + 1) - 1] += t;
         }
     }
 
-    in.push_back(temp);
+    in.push_back(end);
     in.erase(in.begin());
 }
+
 
 /*
  * A function that checks that both arrays are equal (both have the same full scan)
  */
 bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N) {
-    for(int i = 0 ; i < N ; i++) {
-        if(arrOne[i] != arrTwo[i])
+    for (int i = 0; i < N; i++) {
+        if (arrOne[i] != arrTwo[i])
             return false;
     }
     return true;
