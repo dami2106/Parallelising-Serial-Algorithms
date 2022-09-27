@@ -2,6 +2,7 @@
 #include <vector>
 #include <sstream>
 #include <array>
+#include <set>
 
 using namespace std;
 
@@ -10,7 +11,10 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount);
 int main() {
     int vertexCount, edgeCount;
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount);;
-
+    set<int> visited;
+    for(int i = 1 ; i < vertexCount ; i++) {
+        
+    }
 
 
 }
