@@ -27,25 +27,23 @@ int main(int argc, char *argv[]) {
 
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
     double startTime, serRunTime = 0, parRunTime = 0;
+    int iterations = atoi(argv[2]);
 
-    startTime = omp_get_wtime();
-    vector<int> serialDist = serialDijkstra(vertexCount, startVertex, adj);
-    serRunTime = omp_get_wtime() - startTime;
+    for (int iter = 0; iter < iterations; iter++) {
+        startTime = omp_get_wtime();
+        vector<int> serialDist = serialDijkstra(vertexCount, startVertex, adj);
+        serRunTime += omp_get_wtime() - startTime;
 
-    startTime = omp_get_wtime();
-    vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
-    parRunTime = omp_get_wtime() - startTime;
+        startTime = omp_get_wtime();
+        vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
+        parRunTime += omp_get_wtime() - startTime;
 
-    if(serialDist != parallelDist) cout <<"\nValidation Failed\n";
-    else{
-        cout <<"Validation Passed! --> " << argv[1] << endl;
-        cout << "Serial Time : " << serRunTime << endl;
-        cout << "Parallel Time : " << parRunTime << endl;
-        cout << "Speed-Up: " << (serRunTime/parRunTime) << endl;
+        if (serialDist != parallelDist) cout << "\nValidation Failed\n";
+
     }
-
-
-
+    cout << "Serial Time : " << serRunTime / iterations << endl;
+    cout << "Parallel Time : " << parRunTime / iterations << endl;
+    cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
 }
 
 vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
@@ -85,7 +83,7 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
     int u = -1, min = INT_MAX;
 
     l[startVertex] = 0;
-    //vT.insert(startVertex);
+
 #pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, startVertex)
     {
         threadID = omp_get_thread_num();
@@ -94,25 +92,32 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
         threadBoundRight = ((threadID + 1) * vertexCount) / threadCount - 1;
 
         for (currentVert = 0; currentVert < vertexCount; currentVert++) {
-
 #pragma omp single
             {
                 u = -1;
                 min = INT_MAX;
             }
+
             localU = -1;
             localMin = INT_MAX;
 
             for (int i = threadBoundLeft; i <= threadBoundRight; i++)
                 if (vT.find(i) == vT.end() && l[i] < localMin) localMin = l[i], localU = i;
 
+            if (localMin < min) {
 #pragma omp critical
-            if (localMin < min) min = localMin, u = localU;
+                {
+                    min = localMin;
+                    u = localU;
+                }
+            }
 
 #pragma omp barrier
 
+            if (u != -1) {
 #pragma omp single
-            if (u != -1) vT.insert(u);
+                vT.insert(u);
+            }
 
             if (u != -1) {
                 for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
@@ -120,6 +125,7 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
                         if (vT.find(i) == vT.end() && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u];
                 }
             }
+
 #pragma omp barrier
         }
     }
