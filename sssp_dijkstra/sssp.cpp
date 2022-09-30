@@ -3,19 +3,30 @@
 #include <sstream>
 #include <array>
 #include <unordered_set>
-
+#include <omp.h>
+#include <fstream>
+#include <climits>
 
 using namespace std;
 
-vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount);
+vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
+vector<int> dijkstra(int vertexCount, int startVertex, vector<vector<int> > adj);
 
 void printPath(int vert, vector<int> parents);
-
 void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 
-int main() {
+//arg[1] = file name, arg[2] = iterations
+int main(int argc, char* argv[]) {
     int vertexCount, edgeCount, startVertex = 0;
-    vector<vector<int> > adj = makeGraph(vertexCount, edgeCount);
+    if(argv[1] == NULL) argv[1] = "graph_0";
+
+    vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
+    vector<int> distance = dijkstra(vertexCount, startVertex, adj);
+    for (int c : distance)
+        cout << c << " ";
+}
+
+vector<int> dijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
     unordered_set<int> vT;
     vector<int> dist(vertexCount, INT_MAX);
     vector<int> parents(vertexCount);
@@ -26,7 +37,10 @@ int main() {
         int u, min = INT_MAX;
 
         for (int i = 0; i < vertexCount; i++)
-            if (vT.find(i) == vT.end() && dist[i] < min) min = dist[i], u = i;
+            if (vT.find(i) == vT.end() && dist[i] < min) {
+                min = dist[i];
+                u = i;
+            }
 
         vT.insert(u);
 
@@ -38,8 +52,9 @@ int main() {
                 }
         }
     }
-    printSolution(startVertex, dist, parents);
+    return dist;
 }
+
 
 /*
  * Prints the path from start to vertex
@@ -76,11 +91,13 @@ void printSolution(int startVertex, vector<int> distances, vector<int> parents) 
 /*
  * Creates and returns an adjacency matrix from std in
  */
-vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount) {
+vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName) {
     string initLine, word;
     vector<int> graphInfo;
 
-    getline(cin, initLine);
+    ifstream fileReader("graphs/" + fileName + ".txt");
+
+    getline(fileReader, initLine);
     stringstream ss(initLine);
 
     while (ss >> word)
@@ -95,7 +112,7 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount) {
         array<int, 3> nodeInfo;
         int k = 0;
 
-        getline(cin, currNode);
+        getline(fileReader, currNode);
         stringstream sx(currNode);
 
         while (sx >> nodeItem) {
@@ -106,5 +123,6 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount) {
         adj[nodeInfo[1]][nodeInfo[0]] = nodeInfo[2];
     }
 
+    fileReader.close();
     return adj;
 }

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <omp.h>
 
 std::vector<int> generateArray(int N);
 void fullScan(std::vector<int> &in, std::vector<int> &out, int N);
@@ -11,13 +12,19 @@ void fullScan(std::vector<int> &in, std::vector<int> &out, int N);
 int main (int argc, char *argv[]) {
 
     int N = atoi(argv[1]);
+    int iter = atoi(argv[2]);
+    double startTime, endTime=0;
+
     std::vector<int> in = generateArray(N);
     std::vector<int> out(N, 0);
-    fullScan(in, out, N);
 
-    for (int c : out) {
-        std::cout << c << " ";
+    for (int i = 0 ; i < iter ; i++){
+        startTime = omp_get_wtime();
+        fullScan(in, out, N);
+        endTime += omp_get_wtime() - startTime;
     }
+
+    std::cout << (endTime/iter) << std::endl;
     return 0;
 }
 
