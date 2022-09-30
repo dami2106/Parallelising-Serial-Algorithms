@@ -18,7 +18,7 @@ void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 //arg[1] = file name, arg[2] = iterations
 int main(int argc, char* argv[]) {
     int vertexCount, edgeCount, startVertex = 0;
-    if(argv[1] == NULL) argv[1] = "graph_0";
+    if(argv[1] == NULL) argv[1] = "graph_0"; //Fallback incase an argument is not given
 
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
     vector<int> distance = dijkstra(vertexCount, startVertex, adj);
