@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define NUMTHREADS 4
+#define NUMTHREADS 8
 
 vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
 
@@ -49,9 +49,9 @@ int main(int argc, char *argv[]) {
 vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
     unordered_set<int> vT;
     vector<int> l(vertexCount, INT_MAX);
-    vector<int> parents(vertexCount);
+    //vector<int> parents(vertexCount);
     l[startVertex] = 0;
-    parents[startVertex] = -1;
+    //parents[startVertex] = -1;
 
     while ((int) vT.size() != vertexCount) {
         int u, min = INT_MAX;
@@ -68,7 +68,7 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> 
             if (adj[v][u] != -1)
                 if (vT.find(v) == vT.end() && l[v] > l[u] + adj[v][u]) {
                     l[v] = l[u] + adj[v][u];
-                    parents[v] = u;
+                    //parents[v] = u;
                 }
         }
     }
@@ -82,14 +82,20 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
     int threadID, threadCount, localMin = INT_MAX, localU = -1, currentVert, threadBoundLeft, threadBoundRight;
     int u = -1, min = INT_MAX;
 
+    if(vertexCount%NUMTHREADS != 0) {
+        std::cerr << "Thread count given (" <<NUMTHREADS << ") does not work with the number of vertices defined (" <<vertexCount << ")\n";
+        return l;
+    }
+
+
     l[startVertex] = 0;
 
 #pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, startVertex)
     {
         threadID = omp_get_thread_num();
         threadCount = omp_get_num_threads();
-        threadBoundLeft = (threadID * vertexCount) / threadCount;
-        threadBoundRight = ((threadID + 1) * vertexCount) / threadCount - 1;
+        threadBoundLeft = threadID * (vertexCount / threadCount);
+        threadBoundRight = ((threadID + 1) * (vertexCount / threadCount)) - 1;
 
         for (currentVert = 0; currentVert < vertexCount; currentVert++) {
 #pragma omp single
