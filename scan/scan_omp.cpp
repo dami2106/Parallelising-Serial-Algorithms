@@ -5,8 +5,9 @@
 #include <vector>
 #include <random>
 #include <omp.h>
+#include <array>
 
-#define NUMTHREADS 8
+#define NUMTHREADS 16
 
 std::vector<int> generateArray(int N);
 
@@ -17,39 +18,31 @@ void ompFullScan(std::vector<int> &in, int N);
 bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N);
 
 int main(int argc, char *argv[]) {
-    int N = (int) pow(2, atoi(argv[1]));
+     int N = (int) pow(2, atoi(argv[1]));
     int iter = atoi(argv[2]);
     double startTime, sRunTime = 0, pRunTime = 0;
 
-    std::vector<int> in = generateArray(N);
-    for(int c : in)
-        std::cout << c << " ";
-    std::cout << std::endl;
-    ompFullScan(in, N);
-    for(int c : in)
-        std::cout << c << " ";
-    std::cout << std::endl;
-//    for (int z = 0; z < iter; z++) {
-//        std::vector<int> in = generateArray(N);
-//        std::vector<int> out(N, 0);
-//
-////        startTime = omp_get_wtime();
-////        fullScan(in, out, N);
-////        sRunTime += omp_get_wtime() - startTime;
-//
-//        startTime = omp_get_wtime();
-//        ompFullScan(in, N);
-//        pRunTime += omp_get_wtime() - startTime;
-//
-//        if (!compareScan(in, out, N))
-//            std::cout << "WRONG\n";
-//    }
+    for (int z = 0; z < iter; z++) {
+        std::vector<int> in = generateArray(N);
+        std::vector<int> out(N, 0);
+
+        startTime = omp_get_wtime();
+        fullScan(in, out, N);
+        sRunTime += omp_get_wtime() - startTime;
+
+        startTime = omp_get_wtime();
+        ompFullScan(in, N);
+        pRunTime += omp_get_wtime() - startTime;
+
+        if (!compareScan(in, out, N))
+            std::cout << "WRONG\n";
+    }
 
 
-//    std::cout << "Parallel FS gets: " << pRunTime / iter << "\nSerial FS gets: " << sRunTime / iter
-//              << "\nWith a speed-up of: " << sRunTime / pRunTime << std::endl;
-//    std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
-//    std::cout << "Running on " << NUMTHREADS << " threads\n";
+    std::cout << "Parallel FS gets: " << pRunTime / iter << "\nSerial FS gets: " << sRunTime / iter
+              << "\nWith a speed-up of: " << sRunTime / pRunTime << std::endl;
+    std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
+    std::cout << "Running on " << NUMTHREADS << " threads\n";
 
     return 0;
 }
@@ -115,33 +108,35 @@ void ompFullScanOld(std::vector<int> &in, int N) {
  */
 void ompFullScan(std::vector<int> &in, int N) {
     int threadID, threadCount, threadBoundLeft, threadBoundRight, i;
-    std::vector<int> globalSum(N, 0);
-    std::vector<int> incrementValues(N, 0);
+    std::array<int, NUMTHREADS> globalSum;
+    std::array<int, NUMTHREADS> incrementValues;
 
-#pragma omp parallel private(i, threadCount, threadID, threadBoundLeft, threadBoundRight) shared(in, N, globalSum, incrementValues)
+#pragma omp parallel num_threads(NUMTHREADS) private(i, threadCount, threadID, threadBoundLeft, threadBoundRight) shared(in, N, globalSum, incrementValues)
     {
         threadID = omp_get_thread_num();
         threadCount = omp_get_num_threads();
         threadBoundLeft = threadID * (N / threadCount);
         threadBoundRight = ((threadID + 1) * (N / threadCount)) - 1;
 
-        for(i = threadBoundLeft ; i <= threadBoundRight ; i++)
-            in[i] += in[i-1];
-        globalSum[threadID] = in[i-1];
+        for (i = threadBoundLeft + 1; i <= threadBoundRight && i < N; i++)
+            in[i] += in[i - 1];
+        globalSum[threadID] = in[i - 1];
 
 #pragma omp barrier
-
-        for(i = 1 ; i < NUMTHREADS ; i++){
-            if(threadID >= i){
-                incrementValues[threadID] = globalSum[threadID] + globalSum[threadID - 1];
+        for (i = 1; i < threadCount; i <<= 1) {
+            if (threadID >= i) {
+                incrementValues[threadID] = globalSum[threadID] + globalSum[threadID - i];
             }
+#pragma omp barrier
+#pragma omp single
+                std::copy(std::begin(incrementValues) + 1, std::end(incrementValues), std::begin(globalSum) + 1);
         }
 #pragma omp barrier
-        for(i = threadBoundLeft ; i <= threadBoundRight ; i++){
-            in[i] += globalSum[threadID] - in[threadBoundRight - 1];
+        for (i = threadBoundLeft; i <= threadBoundRight; i++) {
+            in[i] += globalSum[threadID] - in[threadBoundRight];
         }
-
     }
+
 }
 
 /*
