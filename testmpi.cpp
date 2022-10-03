@@ -1,7 +1,9 @@
 #include <mpi.h>
 #include <iostream>
 
-int main(int argc, char** argv) {
+using namespace std;
+
+int main(int argc, char **argv) {
 
     int num_processors, processor_id;
     // Initialize the MPI environment
@@ -9,8 +11,13 @@ int main(int argc, char** argv) {
 
     MPI_Comm_size(MPI_COMM_WORLD, &num_processors);
     MPI_Comm_rank(MPI_COMM_WORLD, &processor_id);
+    int fuck;
+    if (processor_id == 0) {
+        fuck = 69;
+    }
+    MPI_Bcast(&fuck, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    cout << "Other : " << processor_id << " : " << fuck << endl;
 
-    std::cout << "Hi from Process " << processor_id << " out of " << num_processors << std::endl;
 
     MPI_Finalize();
 

@@ -5,13 +5,21 @@
 ```
 PC-Assignment
 │   README.md
+│   ResearchAnalysis.pdf
 │
 └───scan
-│   │   file011.txt
-│   │   file012.txt
+│   │   makefile
+│   │   run.sh
+│   │   scan.cpp
+│   │   scan_omp.cpp
+│   │   scan_mpi.cpp
+│   
 │   
 └───sssp_dijsktra
-    │   file021.txt
-    │   file022.txt
-    
+    └───graphs
+    │   makefile
+    │   run.sh
+    │   sssp.cpp  
+    │   sssp_omp.cpp      
+    │   sssp_mpi.cpp       
 ```

@@ -98,7 +98,7 @@ void ompFullScan(std::vector<int> &in, int N) {
             }
 #pragma omp barrier
 #pragma omp single
-                std::copy(std::begin(incrementValues) + 1, std::end(incrementValues), std::begin(globalSum) + 1);
+            std::copy(std::begin(incrementValues) + 1, std::end(incrementValues), std::begin(globalSum) + 1);
         }
 #pragma omp barrier
         for (i = threadBoundLeft; i <= threadBoundRight; i++) {
