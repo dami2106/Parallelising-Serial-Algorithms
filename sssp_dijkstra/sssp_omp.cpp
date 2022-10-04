@@ -87,7 +87,6 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
         return l;
     }
 
-
     l[startVertex] = 0;
 
 #pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, startVertex)

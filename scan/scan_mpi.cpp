@@ -1,49 +1,59 @@
 /*
- * Parallel implementation of Blelloch Parallel Scan
+ * Parallel distributed implementation of Blelloch Parallel Scan
  */
 #include <iostream>
 #include <vector>
 #include <random>
-#include <omp.h>
+#include <mpi.h>
 #include <array>
 
-#define NUMTHREADS 8
 
 std::vector<int> generateArray(int N);
 
 void fullScan(std::vector<int> &in, std::vector<int> &out, int N);
 
-void ompFullScan(std::vector<int> &in, int N);
+void mpiFullScan(std::vector<int> &in, int N);
 
 bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N);
 
 int main(int argc, char *argv[]) {
     int N = (int) pow(2, atoi(argv[1]));
     int iter = atoi(argv[2]);
-    double startTime, sRunTime = 0, pRunTime = 0;
 
-    for (int z = 0; z < iter; z++) {
-        std::vector<int> in = generateArray(N);
-        std::vector<int> out(N, 0);
+    int id;
+    double startTime, serRuntime = 0, parRuntime = 0;
+    std::vector<int> in;
+    std::vector<int> ser(N, 0);
 
-        startTime = omp_get_wtime();
-        fullScan(in, out, N);
-        sRunTime += omp_get_wtime() - startTime;
+    MPI_Init(NULL, NULL);
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
-        startTime = omp_get_wtime();
-        ompFullScan(in, N);
-        pRunTime += omp_get_wtime() - startTime;
-
-        if (!compareScan(in, out, N))
-            std::cout << "WRONG\n";
+    if (id == 0) {
+        in = generateArray(N);
+        startTime = MPI_Wtime();
+        fullScan(in, ser, N);
+        serRuntime = MPI_Wtime() - startTime;
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    std::cout << "Parallel FS gets: " << pRunTime / iter << "\nSerial FS gets: " << sRunTime / iter
-              << "\nWith a speed-up of: " << sRunTime / pRunTime << std::endl;
-    std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
-    std::cout << "Running on " << NUMTHREADS << " threads\n";
+    startTime = MPI_Wtime();
+    mpiFullScan(in, N);
+    parRuntime = MPI_Wtime() - startTime;
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (id == 0) {
+        if (!compareScan(in, ser, N))
+            std::cout << "ERROR\n";
+        else {
+            std::cout << "Parallel FS gets: " << parRuntime / iter << "\nSerial FS gets: " << serRuntime / iter
+                      << "\nWith a speed-up of: " << serRuntime / parRuntime << std::endl;
+            std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
+        }
+    }
+
+    MPI_Finalize();
     return 0;
 }
 
@@ -73,39 +83,43 @@ void fullScan(std::vector<int> &in, std::vector<int> &out, int N) {
 }
 
 /*
- * A function that performs a parallel full scan on the given array
+ * A function that performs a distributed parallel full scan on the given array
  */
-void ompFullScan(std::vector<int> &in, int N) {
-    int threadID, threadCount, threadBoundLeft, threadBoundRight, i;
-    std::array<int, NUMTHREADS> globalSum;
-    std::array<int, NUMTHREADS> incrementValues;
+void mpiFullScan(std::vector<int> &in, int N) {
+    int threadCount, threadID, localN, localSum = 0, localIncrement = 0;
 
-#pragma omp parallel num_threads(NUMTHREADS) private(i, threadCount, threadID, threadBoundLeft, threadBoundRight) shared(in, N, globalSum, incrementValues)
-    {
-        threadID = omp_get_thread_num();
-        threadCount = omp_get_num_threads();
-        threadBoundLeft = threadID * (N / threadCount);
-        threadBoundRight = ((threadID + 1) * (N / threadCount)) - 1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
+    MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
+    localN = N / threadCount;
 
-        for (i = threadBoundLeft + 1; i <= threadBoundRight && i < N; i++)
-            in[i] += in[i - 1];
-        globalSum[threadID] = in[i - 1];
+    std::vector<int> globalSum(threadCount, 0);
+    std::vector<int> localIn(localN, 0);
 
-#pragma omp barrier
-        for (i = 1; i < threadCount; i <<= 1) {
-            if (threadID >= i) {
-                incrementValues[threadID] = globalSum[threadID] + globalSum[threadID - i];
-            }
-#pragma omp barrier
-#pragma omp single
-            std::copy(std::begin(incrementValues) + 1, std::end(incrementValues), std::begin(globalSum) + 1);
-        }
-#pragma omp barrier
-        for (i = threadBoundLeft; i <= threadBoundRight; i++) {
-            in[i] += globalSum[threadID] - in[threadBoundRight];
-        }
+    MPI_Scatter(in.data(), localN, MPI_INT, localIn.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    for (int i = 1; i < localN; i++) {
+        localIn[i] += localIn[i - 1];
+    }
+    localSum = localIn[localN - 1];
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Allgather(&localSum, 1, MPI_INT, globalSum.data(), 1, MPI_INT, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
+
+
+    //Need to sum up the globalSums
+    for (int i = 0; i < threadID; i++) {
+        localIncrement += globalSum[i];
     }
 
+    if (localIncrement > 0) {
+        for (int i = 0; i < localN; i++)
+            localIn[i] += localIncrement;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Gather(localIn.data(), localN, MPI_INT, in.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
 }
 
 /*

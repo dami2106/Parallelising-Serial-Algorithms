@@ -12,11 +12,11 @@ using namespace std;
 
 #define NUMTHREADS 8
 
-vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
+vector<vector<int>> makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
 
-vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj);
+vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj);
 
-vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj);
+vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj);
 
 void printPath(int vert, vector<int> parents);
 
@@ -25,7 +25,7 @@ void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 int main(int argc, char *argv[]) {
     int vertexCount, edgeCount, startVertex = 0;
 
-    vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
+    vector<vector<int>> adj = makeGraph(vertexCount, edgeCount, argv[1]);
     double startTime, serRunTime = 0, parRunTime = 0;
     int iterations = atoi(argv[2]);
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
 }
 
-vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
+vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj) {
     unordered_set<int> vT;
     vector<int> l(vertexCount, INT_MAX);
     //vector<int> parents(vertexCount);
@@ -75,23 +75,55 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> 
     return l;
 }
 
-vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
+vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj) {
     unordered_set<int> vT; //Keeps track of vertices explored
     vector<int> l(vertexCount, INT_MAX); //Need to subset per thread - keeps track of the min distance from startVertex
 
-    int threadID, threadCount, localMin = INT_MAX, localU = -1, currentVert, threadBoundLeft, threadBoundRight;
-    int u = -1, min = INT_MAX;
+    int threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight;
+    //globalValues[0] -- > closest vertex
+    //globalValues[1] -- > min distance
+    int globalValues[2] = {-1, INT_MAX};
+    int localValues[2] = {-1, INT_MAX};
 
     l[startVertex] = 0;
 
     MPI_Init(NULL, NULL);
+
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
     MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
 
     threadBoundLeft = threadID * (vertexCount / threadCount);
     threadBoundRight = ((threadID + 1) * (vertexCount / threadCount)) - 1;
 
-    for(currentVert = 0 ; currentVert < vertexCount ; currentVert++) {
+    for (currentVert = 0; currentVert < vertexCount; currentVert++) {
+
+        if (threadID == 0) globalValues[0] = -1, globalValues[1] = INT_MAX;
+        MPI_Bcast(&globalValues, 2, MPI_INT, 0, MPI_COMM_WORLD);
+
+        localValues[0] = -1;
+        localValues[1] = INT_MAX;
+
+        for (int i = threadBoundLeft; i <= threadBoundRight; i++)
+            if (vT.find(i) == vT.end() && l[i] < localValues[1]) localValues[1] = l[i], localValues[0] = i;
+
+        MPI_Allreduce(&localValues[1], &globalValues[1], 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+
+        if (localValues[1] == globalValues[1]) {
+            globalValues[1] = localValues[1];
+            MPI_Bcast(&globalValues[1], 1, MPI_INT, threadID, MPI_COMM_WORLD);
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if (globalValues[0] != -1)
+            vT.insert(globalValues[0]);
+
+        if (u != -1) {
+            for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
+                if (adj[i][u] != -1)
+                    if (vT.find(i) == vT.end() && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u];
+            }
+        }
 
     }
 
@@ -179,7 +211,7 @@ void printSolution(int startVertex, vector<int> distances, vector<int> parents) 
 /*
  * Creates and returns a square symmetric adjacency matrix from file in
  */
-vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName) {
+vector<vector<int>> makeGraph(int &vertexCount, int &edgeCount, const string &fileName) {
     string initLine, word;
     vector<int> graphInfo;
 
@@ -194,7 +226,7 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &f
     vertexCount = graphInfo[0];
     edgeCount = graphInfo[1];
 
-    vector<vector<int> > adj(vertexCount, vector<int>(vertexCount, -1));
+    vector<vector<int>> adj(vertexCount, vector<int>(vertexCount, -1));
     for (int i = 0; i < edgeCount; ++i) {
         string currNode, nodeItem;
         array<int, 3> nodeInfo;
