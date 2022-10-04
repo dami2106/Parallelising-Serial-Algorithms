@@ -3,7 +3,6 @@
 #include <sstream>
 #include <array>
 #include <unordered_set>
-#include <omp.h>
 #include <fstream>
 #include <climits>
 #include <mpi.h>
@@ -23,24 +22,22 @@ void printPath(int vert, vector<int> parents);
 void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 
 int main(int argc, char *argv[]) {
-    int vertexCount, edgeCount, startVertex = 0;
-
-    vector<vector<int>> adj = makeGraph(vertexCount, edgeCount, argv[1]);
+    vector<vector<int>> adj;
     double startTime, serRunTime = 0, parRunTime = 0;
+    int vertexCount, edgeCount, startVertex = 0, id;
     int iterations = atoi(argv[2]);
 
-    for (int iter = 0; iter < iterations; iter++) {
-        startTime = omp_get_wtime();
-        vector<int> serialDist = serialDijkstra(vertexCount, startVertex, adj);
-        serRunTime += omp_get_wtime() - startTime;
+    MPI_Init(NULL, NULL);
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
-        startTime = omp_get_wtime();
-        vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
-        parRunTime += omp_get_wtime() - startTime;
+    if(id == 0)
+        adj = makeGraph(vertexCount, edgeCount, argv[1]);
 
-        if (serialDist != parallelDist) cout << "\nValidation Failed\n";
+    MPI_Bcast(adj.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    }
+    vector<int> dist = parallelDijkstra(vertexCount, startVertex, adj);
+
     cout << "Serial Time : " << serRunTime / iterations << endl;
     cout << "Parallel Time : " << parRunTime / iterations << endl;
     cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
@@ -76,103 +73,17 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>>
 }
 
 vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj) {
-    unordered_set<int> vT; //Keeps track of vertices explored
-    vector<int> l(vertexCount, INT_MAX); //Need to subset per thread - keeps track of the min distance from startVertex
+    int threadID, threadCount;
+    int localVals[2] = {-1, INT_MAX};
+    int globalVals[2] = {-1, INT_MAX};
 
-    int threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight;
-    //globalValues[0] -- > closest vertex
-    //globalValues[1] -- > min distance
-    int globalValues[2] = {-1, INT_MAX};
-    int localValues[2] = {-1, INT_MAX};
-
-    l[startVertex] = 0;
-
-    MPI_Init(NULL, NULL);
-
-    MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
     MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
+    MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
 
-    threadBoundLeft = threadID * (vertexCount / threadCount);
-    threadBoundRight = ((threadID + 1) * (vertexCount / threadCount)) - 1;
+    int localCount = vertexCount/threadCount;
 
-    for (currentVert = 0; currentVert < vertexCount; currentVert++) {
 
-        if (threadID == 0) globalValues[0] = -1, globalValues[1] = INT_MAX;
-        MPI_Bcast(&globalValues, 2, MPI_INT, 0, MPI_COMM_WORLD);
 
-        localValues[0] = -1;
-        localValues[1] = INT_MAX;
-
-        for (int i = threadBoundLeft; i <= threadBoundRight; i++)
-            if (vT.find(i) == vT.end() && l[i] < localValues[1]) localValues[1] = l[i], localValues[0] = i;
-
-        MPI_Allreduce(&localValues[1], &globalValues[1], 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
-
-        if (localValues[1] == globalValues[1]) {
-            globalValues[1] = localValues[1];
-            MPI_Bcast(&globalValues[1], 1, MPI_INT, threadID, MPI_COMM_WORLD);
-        }
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
-        if (globalValues[0] != -1)
-            vT.insert(globalValues[0]);
-
-        if (u != -1) {
-            for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
-                if (adj[i][u] != -1)
-                    if (vT.find(i) == vT.end() && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u];
-            }
-        }
-
-    }
-
-//#pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, startVertex)
-//    {
-//        threadID = omp_get_thread_num();
-//        threadCount = omp_get_num_threads();
-//        threadBoundLeft = threadID * (vertexCount / threadCount);
-//        threadBoundRight = ((threadID + 1) * (vertexCount / threadCount)) - 1;
-//
-//        for (currentVert = 0; currentVert < vertexCount; currentVert++) {
-//#pragma omp single
-//            {
-//                u = -1;
-//                min = INT_MAX;
-//            }
-//
-//            localU = -1;
-//            localMin = INT_MAX;
-//
-//            for (int i = threadBoundLeft; i <= threadBoundRight; i++)
-//                if (vT.find(i) == vT.end() && l[i] < localMin) localMin = l[i], localU = i;
-//
-//            if (localMin < min) {
-//#pragma omp critical
-//                {
-//                    min = localMin;
-//                    u = localU;
-//                }
-//            }
-//
-//#pragma omp barrier
-//
-//            if (u != -1) {
-//#pragma omp single
-//                vT.insert(u);
-//            }
-//
-//            if (u != -1) {
-//                for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
-//                    if (adj[i][u] != -1)
-//                        if (vT.find(i) == vT.end() && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u];
-//                }
-//            }
-//
-//#pragma omp barrier
-//        }
-//    }
-    return l;
 }
 
 
