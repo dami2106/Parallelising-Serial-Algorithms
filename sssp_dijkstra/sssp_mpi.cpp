@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define NUMTHREADS 8
+#define START 0
 
 vector<vector<int>> makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
 
@@ -81,9 +81,23 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
 
     int localCount = vertexCount/threadCount;
+    int lowerBound = threadID * localCount;
+    int upperBound = ((threadID + 1) * localCount) - 1;
 
+    vector<bool> visited(localCount, false);
+    vector<int> dist(localCount, INT_MAX);
 
+    if(threadID == 0) visited[0] = true;
 
+    for(int i = 0 ; i < vertexCount ; i++) {
+        localVals[0] = -1;
+        localVals[1] = INT_MAX;
+
+        for(int j = 0 ; j < localCount ; j++){
+            if(visited[j] && dist[j] < )
+        }
+
+    }
 }
 
 
