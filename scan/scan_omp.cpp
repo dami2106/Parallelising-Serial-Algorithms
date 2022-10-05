@@ -19,30 +19,25 @@ bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N);
 
 int main(int argc, char *argv[]) {
     int N = (int) pow(2, atoi(argv[1]));
-    int iter = atoi(argv[2]);
     double startTime, sRunTime = 0, pRunTime = 0;
 
-    for (int z = 0; z < iter; z++) {
-        std::vector<int> in = generateArray(N);
-        std::vector<int> out(N, 0);
+    std::vector<int> in = generateArray(N);
+    std::vector<int> out(N, 0);
 
-        startTime = omp_get_wtime();
-        fullScan(in, out, N);
-        sRunTime += omp_get_wtime() - startTime;
+    startTime = omp_get_wtime();
+    fullScan(in, out, N);
+    sRunTime += omp_get_wtime() - startTime;
 
-        startTime = omp_get_wtime();
-        ompFullScan(in, N);
-        pRunTime += omp_get_wtime() - startTime;
+    startTime = omp_get_wtime();
+    ompFullScan(in, N);
+    pRunTime += omp_get_wtime() - startTime;
 
-        if (!compareScan(in, out, N))
-            std::cout << "WRONG\n";
-    }
-
-
-    std::cout << "Parallel FS gets: " << pRunTime / iter << "\nSerial FS gets: " << sRunTime / iter
-              << "\nWith a speed-up of: " << sRunTime / pRunTime << std::endl;
-    std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
-    std::cout << "Running on " << NUMTHREADS << " threads\n";
+    if (!compareScan(in, out, N))
+        std::cout << "Validation Failed!\n";
+    else
+        std::cout << sRunTime / pRunTime;
+//    std::cout << "Parallel FS gets: " << pRunTime  << "\nSerial FS gets: " << sRunTime
+//              << "\nWith a speed-up of: " << sRunTime / pRunTime << std::endl;
 
     return 0;
 }
@@ -98,7 +93,7 @@ void ompFullScan(std::vector<int> &in, int N) {
             }
 #pragma omp barrier
 #pragma omp single
-                std::copy(std::begin(incrementValues) + 1, std::end(incrementValues), std::begin(globalSum) + 1);
+            std::copy(std::begin(incrementValues) + 1, std::end(incrementValues), std::begin(globalSum) + 1);
         }
 #pragma omp barrier
         for (i = threadBoundLeft; i <= threadBoundRight; i++) {

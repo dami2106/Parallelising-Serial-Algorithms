@@ -5,8 +5,6 @@
 #include <vector>
 #include <random>
 #include <mpi.h>
-#include <array>
-
 
 std::vector<int> generateArray(int N);
 
@@ -18,8 +16,6 @@ bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N);
 
 int main(int argc, char *argv[]) {
     int N = (int) pow(2, atoi(argv[1]));
-    int iter = atoi(argv[2]);
-
     int id;
     double startTime, serRuntime = 0, parRuntime = 0;
     std::vector<int> in;
@@ -37,23 +33,28 @@ int main(int argc, char *argv[]) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    startTime = MPI_Wtime();
-    mpiFullScan(in, N);
-    parRuntime = MPI_Wtime() - startTime;
+    if(id == 0)
+        startTime = MPI_Wtime();
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    mpiFullScan(in, N);
+
+    if(id == 0)
+        parRuntime = MPI_Wtime() - startTime;
+
+    MPI_Finalize();
 
     if (id == 0) {
         if (!compareScan(in, ser, N))
             std::cout << "ERROR\n";
         else {
-            std::cout << "Parallel FS gets: " << parRuntime / iter << "\nSerial FS gets: " << serRuntime / iter
-                      << "\nWith a speed-up of: " << serRuntime / parRuntime << std::endl;
-            std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
+            std::cout << serRuntime / parRuntime;
+//            std::cout << "Parallel FS gets: " << parRuntime / iter << "\nSerial FS gets: " << serRuntime / iter
+//                      << "\nWith a speed-up of: " << serRuntime / parRuntime << std::endl;
+//            std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
         }
     }
 
-    MPI_Finalize();
+
     return 0;
 }
 
@@ -96,16 +97,16 @@ void mpiFullScan(std::vector<int> &in, int N) {
     std::vector<int> localIn(localN, 0);
 
     MPI_Scatter(in.data(), localN, MPI_INT, localIn.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
     for (int i = 1; i < localN; i++) {
         localIn[i] += localIn[i - 1];
     }
     localSum = localIn[localN - 1];
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Allgather(&localSum, 1, MPI_INT, globalSum.data(), 1, MPI_INT, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
 
 
     //Need to sum up the globalSums
@@ -118,7 +119,7 @@ void mpiFullScan(std::vector<int> &in, int N) {
             localIn[i] += localIncrement;
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Gather(localIn.data(), localN, MPI_INT, in.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
 }
 

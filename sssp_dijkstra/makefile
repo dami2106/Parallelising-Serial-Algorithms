@@ -1,6 +1,6 @@
-P1=scan
-P2=scan_omp
-P3=scan_mpi
+P1=sssp
+P2=sssp_omp
+P3=sssp_mpi
 #INC="./inc"
 #FLAGS=-I$(INC)
 OMPFLAG=-fopenmp

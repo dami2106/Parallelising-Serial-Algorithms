@@ -27,23 +27,20 @@ int main(int argc, char *argv[]) {
 
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
     double startTime, serRunTime = 0, parRunTime = 0;
-    int iterations = atoi(argv[2]);
 
-    for (int iter = 0; iter < iterations; iter++) {
-        startTime = omp_get_wtime();
-        vector<int> serialDist = serialDijkstra(vertexCount, startVertex, adj);
-        serRunTime += omp_get_wtime() - startTime;
+    startTime = omp_get_wtime();
+    vector<int> serialDist = serialDijkstra(vertexCount, startVertex, adj);
+    serRunTime += omp_get_wtime() - startTime;
 
-        startTime = omp_get_wtime();
-        vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
-        parRunTime += omp_get_wtime() - startTime;
+    startTime = omp_get_wtime();
+    vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
+    parRunTime += omp_get_wtime() - startTime;
 
-        if (serialDist != parallelDist) cout << "\nValidation Failed\n";
-
-    }
-    cout << "Serial Time : " << serRunTime / iterations << endl;
-    cout << "Parallel Time : " << parRunTime / iterations << endl;
-    cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
+    if (serialDist != parallelDist) cout << "Validation Failed\n";
+    cout << serRunTime/parRunTime;
+//    cout << "Serial Time : " << serRunTime / iterations << endl;
+//    cout << "Parallel Time : " << parRunTime / iterations << endl;
+//    cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
 }
 
 vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
@@ -82,8 +79,9 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
     int threadID, threadCount, localMin = INT_MAX, localU = -1, currentVert, threadBoundLeft, threadBoundRight;
     int u = -1, min = INT_MAX;
 
-    if(vertexCount%NUMTHREADS != 0) {
-        std::cerr << "Thread count given (" <<NUMTHREADS << ") does not work with the number of vertices defined (" <<vertexCount << ")\n";
+    if (vertexCount % NUMTHREADS != 0) {
+        std::cerr << "Thread count given (" << NUMTHREADS << ") does not work with the number of vertices defined ("
+                  << vertexCount << ")\n";
         return l;
     }
 

@@ -9,22 +9,19 @@
 std::vector<int> generateArray(int N);
 void fullScan(std::vector<int> &in, std::vector<int> &out, int N);
 
-int main (int argc, char *argv[]) {
-
-    int N = atoi(argv[1]);
-    int iter = atoi(argv[2]);
-    double startTime, endTime=0;
+int main(int argc, char *argv[]) {
+    int N = (int) pow(2, atoi(argv[1]));
+    double startTime, endTime = 0;
 
     std::vector<int> in = generateArray(N);
+
     std::vector<int> out(N, 0);
 
-    for (int i = 0 ; i < iter ; i++){
-        startTime = omp_get_wtime();
-        fullScan(in, out, N);
-        endTime += omp_get_wtime() - startTime;
-    }
+    startTime = omp_get_wtime();
+    fullScan(in, out, N);
+    endTime = omp_get_wtime() - startTime;
 
-    std::cout << (endTime/iter) << std::endl;
+    std::cout << (endTime) << std::endl;
     return 0;
 }
 
@@ -50,5 +47,5 @@ std::vector<int> generateArray(int N) {
 void fullScan(std::vector<int> &in, std::vector<int> &out, int N) {
     out[0] = in[0];
     for (int i = 1; i < N; i++)
-        out[i] = in[i] + out[i-1];
+        out[i] = in[i] + out[i - 1];
 }

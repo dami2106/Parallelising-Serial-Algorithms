@@ -15,14 +15,14 @@ vector<vector<int>> makeGraph(int &vertexCount, int &edgeCount, const string &fi
 
 vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj);
 
-vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<int> adj, vector<int> globalDist);
+vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj, vector<int> globalDist);
 
 void printPath(int vert, vector<int> parents);
 
 void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 
 int main(int argc, char *argv[]) {
-    double startTime = 0, parRunTime = 0;
+    double startTime = 0, parRunTime = 0, serRunTime = 0;
 
     //int iterations = atoi(argv[2]);
     MPI_Init(NULL, NULL);
@@ -33,12 +33,17 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
 
     vector<vector<int>> adj = makeGraph(vertexCount, edgeCount, argv[1]);
+
     vector<int> globalDist(vertexCount, 0);
+    vector<int> serDij;
 
-    if(threadID == 0)
+    if (threadID == 0) {
         startTime = MPI_Wtime();
+        serDij = serialDijkstra(vertexCount, START, adj);
+        serRunTime = MPI_Wtime() - startTime;
+        startTime = MPI_Wtime();
+    }
 
-    //[0] is the distance, [1] is the vertex
     int localVals[2] = {INT_MAX, -1};
     int globalVals[2] = {INT_MAX, -1};
 
@@ -83,17 +88,17 @@ int main(int argc, char *argv[]) {
 
     }
 
-    if(threadID == 0)
-        parRunTime = MPI_Wtime() - startTime ;
+    if (threadID == 0)
+        parRunTime = MPI_Wtime() - startTime;
 
     MPI_Gather(dist.data(), localCount, MPI_INT, globalDist.data(), localCount, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Finalize();
 
     if (threadID == 0) {
-        for (int c: globalDist)
-            cout << c << " ";
-        cout << endl;
-        cout << "Runtime for " << argv[1] << " was: " << parRunTime << endl;
+        if(globalDist != serDij)
+            cout << "Validation Failed!";
+        else
+            cout << serRunTime/parRunTime;
     }
 }
 
@@ -117,7 +122,7 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>>
         vT.insert(u);
 
         for (int v = 0; v < vertexCount; v++) {
-            if (adj[v][u] != -1)
+            if (adj[v][u] != INT_MAX)
                 if (vT.find(v) == vT.end() && l[v] > l[u] + adj[v][u]) {
                     l[v] = l[u] + adj[v][u];
                     //parents[v] = u;
