@@ -22,7 +22,7 @@ void printPath(int vert, vector<int> parents);
 void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 
 int main(int argc, char *argv[]) {
-    //double startTime, serRunTime = 0, parRunTime = 0;
+    double startTime = 0, parRunTime = 0;
 
     //int iterations = atoi(argv[2]);
     MPI_Init(NULL, NULL);
@@ -35,7 +35,8 @@ int main(int argc, char *argv[]) {
     vector<vector<int>> adj = makeGraph(vertexCount, edgeCount, argv[1]);
     vector<int> globalDist(vertexCount, 0);
 
-    //Start timer here
+    if(threadID == 0)
+        startTime = MPI_Wtime();
 
     //[0] is the distance, [1] is the vertex
     int localVals[2] = {INT_MAX, -1};
@@ -47,9 +48,6 @@ int main(int argc, char *argv[]) {
 
     vector<bool> visited(localCount, false);
     vector<int> dist(localCount, INT_MAX);
-
-//    for (int i = 0; i < localCount; i++)
-//        dist[i] = adj[START][i + lowerBound];
 
     if (lowerBound <= START && START <= upperBound) {
         dist[START] = 0;
@@ -66,7 +64,7 @@ int main(int argc, char *argv[]) {
             }
         }
         MPI_Allreduce(localVals, globalVals, 1, MPI_2INT, MPI_MINLOC, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
 
         if (globalVals[1] == localVals[1]) {
             visited[(globalVals[1] - lowerBound)] = true;
@@ -85,6 +83,9 @@ int main(int argc, char *argv[]) {
 
     }
 
+    if(threadID == 0)
+        parRunTime = MPI_Wtime() - startTime ;
+
     MPI_Gather(dist.data(), localCount, MPI_INT, globalDist.data(), localCount, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Finalize();
 
@@ -92,6 +93,7 @@ int main(int argc, char *argv[]) {
         for (int c: globalDist)
             cout << c << " ";
         cout << endl;
+        cout << "Runtime for " << argv[1] << " was: " << parRunTime << endl;
     }
 }
 

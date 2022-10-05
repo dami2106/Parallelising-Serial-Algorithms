@@ -18,12 +18,16 @@ void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 //arg[1] = file name, arg[2] = iterations
 int main(int argc, char* argv[]) {
     int vertexCount, edgeCount, startVertex = 0;
+    double startTime, runTime = 0;
     if(argv[1] == NULL) argv[1] = "graph_0"; //Fallback incase an argument is not given
 
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
+    startTime = omp_get_wtime();
     vector<int> distance = dijkstra(vertexCount, startVertex, adj);
+    runTime = omp_get_wtime() - startTime;
     for (int c : distance)
         cout << c << " ";
+    cout << "Runtime for " << argv[1] << " was: " << runTime;
 }
 
 vector<int> dijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
