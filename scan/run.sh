@@ -1,6 +1,8 @@
 ARRAY_SIZE=28
 ITERATIONS=1
-make >/dev/null
+echo -------------Compiling Files-------------
+make
+echo
 echo -------Array is size: 2^$ARRAY_SIZE, with $ITERATIONS iterations-------
 echo
 echo ------------Serial Scan is starting---------------
@@ -21,5 +23,7 @@ echo -------------OMP Scan is done-------------
 #echo Serial Time : $SER_TIME
 #echo OMP Speed Up : $OMP_TIME
 #echo MPI Speed Up : $MPI_TIME
-make clean >/dev/null
-rm -vf terminal.out >/dev/null
+echo
+echo -------------Cleaning Files-------------
+make clean
+rm -vf terminal.out

@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     fullScan(in, out, N);
     endTime = omp_get_wtime() - startTime;
 
-    std::cout << (endTime) << std::endl;
+    std::cout << (endTime);
     return 0;
 }
 

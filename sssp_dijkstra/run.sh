@@ -1,5 +1,7 @@
 GRAPH=graph_7
-make >/dev/null
+echo -------------Compiling Files-------------
+make
+echo
 echo -------Performing Dijsktra on graph $GRAPH-------
 echo
 echo ------------Serial SSSP is starting---------------
@@ -20,5 +22,7 @@ echo -------------OMP SSSP is done-------------
 #echo Serial Time : $SER_TIME
 #echo OMP Speed Up : $OMP_TIME
 #echo MPI Speed Up : $MPI_TIME
-make clean >/dev/null
-rm -vf terminal.out >/dev/null
+echo
+echo -------------Cleaning Files-------------
+make clean
+rm -vf terminal.out
