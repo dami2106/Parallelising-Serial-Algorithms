@@ -45,9 +45,9 @@ int main(int argc, char *argv[]) {
 
     if (id == 0) {
         if (!compareScan(in, ser, N))
-            std::cout << "ERROR\n";
+            std::cout << "(Validation Failed!)";
         else {
-            std::cout << serRuntime / parRuntime;
+            std::cout << serRuntime / parRuntime << "  (Validation Passed!)";
 //            std::cout << "Parallel FS gets: " << parRuntime / iter << "\nSerial FS gets: " << serRuntime / iter
 //                      << "\nWith a speed-up of: " << serRuntime / parRuntime << std::endl;
 //            std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;

@@ -33,9 +33,9 @@ int main(int argc, char *argv[]) {
     pRunTime += omp_get_wtime() - startTime;
 
     if (!compareScan(in, out, N))
-        std::cout << "Validation Failed!\n";
+        std::cout << "(Validation Failed!)";
     else
-        std::cout << sRunTime / pRunTime;
+        std::cout << sRunTime / pRunTime << "  (Validation Passed!)";
 //    std::cout << "Parallel FS gets: " << pRunTime  << "\nSerial FS gets: " << sRunTime
 //              << "\nWith a speed-up of: " << sRunTime / pRunTime << std::endl;
 

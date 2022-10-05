@@ -96,9 +96,9 @@ int main(int argc, char *argv[]) {
 
     if (threadID == 0) {
         if(globalDist != serDij)
-            cout << "Validation Failed!";
+            cout << "(Validation Failed!)";
         else
-            cout << serRunTime/parRunTime;
+            cout << serRunTime/parRunTime << "  (Validation Passed!)";
     }
 }
 

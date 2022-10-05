@@ -36,8 +36,10 @@ int main(int argc, char *argv[]) {
     vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
     parRunTime += omp_get_wtime() - startTime;
 
-    if (serialDist != parallelDist) cout << "Validation Failed\n";
-    cout << serRunTime/parRunTime;
+    if (serialDist != parallelDist)
+        cout << "(Validation Failed!)";
+    else
+        cout << serRunTime/parRunTime << "  (Validation Passed!)";
 //    cout << "Serial Time : " << serRunTime / iterations << endl;
 //    cout << "Parallel Time : " << parRunTime / iterations << endl;
 //    cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
