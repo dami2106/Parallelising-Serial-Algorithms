@@ -1,13 +1,11 @@
 # Parallel Computing Assignment COMS3008A  
 ## 2303289, Damion Harvey 
   
-  ### How to run & compile:
-  Each program is setup in its own folder (ie, scan, sssp_dijsktra). Using a bash terminal, cd into the desired directory.  
-  The provided shell file (run.sh) will compile all 3 programs, run all 3 files (displaying the useful info to the screen) and then discard the executables.  
-  Please ensure to have the correct version of g++, OpenMP, and OpenMPI installed. 
-  
-  ### Examples of output for the seperate collection of programs:
-  
+### How to run & compile:
+Each program is setup in its own folder (ie, scan, sssp_dijsktra). Using a bash terminal, cd into the desired directory.  
+The provided shell file (run.sh) will compile all 3 programs, run all 3 files (displaying the useful info to the screen) and then discard the executables.  
+Please ensure to have the correct version of g++, OpenMP, and OpenMPI installed. 
+*Please see examples at the bottom of the read me of running the different program sets*
   
 ### Project File Stucture is as follows: 
 ```
@@ -39,4 +37,8 @@ PC-Assignment
   g++ --> g++ (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
   OpenMP --> (Bundled with the g++ from above)
   OpenMPI --> mpirun (Open MPI) 4.0.3
-  
+    
+    
+ ### Examples of output for the seperate collection of programs:
+ <img width="613" alt="Scan Example" src="https://user-images.githubusercontent.com/102320150/194163742-772589d3-7ef0-4874-9cbc-0bdbf33d021a.png">
+
