@@ -15,33 +15,86 @@ vector<vector<int>> makeGraph(int &vertexCount, int &edgeCount, const string &fi
 
 vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj);
 
-vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj);
+vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<int> adj, vector<int> globalDist);
 
 void printPath(int vert, vector<int> parents);
 
 void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 
 int main(int argc, char *argv[]) {
-    vector<vector<int>> adj;
-    double startTime, serRunTime = 0, parRunTime = 0;
-    int vertexCount, edgeCount, startVertex = 0, id;
-    int iterations = atoi(argv[2]);
+    //double startTime, serRunTime = 0, parRunTime = 0;
 
+    //int iterations = atoi(argv[2]);
     MPI_Init(NULL, NULL);
-    MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
-    if(id == 0)
-        adj = makeGraph(vertexCount, edgeCount, argv[1]);
+    int vertexCount, edgeCount, threadID, threadCount;
 
-    MPI_Bcast(adj.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
+    MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
 
-    vector<int> dist = parallelDijkstra(vertexCount, startVertex, adj);
+    vector<vector<int>> adj = makeGraph(vertexCount, edgeCount, argv[1]);
+    vector<int> globalDist(vertexCount, 0);
 
-    cout << "Serial Time : " << serRunTime / iterations << endl;
-    cout << "Parallel Time : " << parRunTime / iterations << endl;
-    cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
+    //Start timer here
+
+    //[0] is the distance, [1] is the vertex
+    int localVals[2] = {INT_MAX, -1};
+    int globalVals[2] = {INT_MAX, -1};
+
+    int localCount = vertexCount / threadCount;
+    int lowerBound = threadID * localCount;
+    int upperBound = ((threadID + 1) * localCount) - 1;
+
+    vector<bool> visited(localCount, false);
+    vector<int> dist(localCount, INT_MAX);
+
+//    for (int i = 0; i < localCount; i++)
+//        dist[i] = adj[START][i + lowerBound];
+
+    if (lowerBound <= START && START <= upperBound) {
+        dist[START] = 0;
+    }
+
+    for (int i = 0; i < vertexCount; i++) {
+        localVals[0] = INT_MAX;
+        localVals[1] = -1;
+
+        for (int j = 0; j < localCount; j++) {
+            if (!visited[j] && (dist[j] < localVals[0])) {
+                localVals[1] = j + lowerBound;
+                localVals[0] = dist[j];
+            }
+        }
+        MPI_Allreduce(localVals, globalVals, 1, MPI_2INT, MPI_MINLOC, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        if (globalVals[1] == localVals[1]) {
+            visited[(globalVals[1] - lowerBound)] = true;
+        }
+
+
+        for (int j = 0; j < localCount; j++) {
+            int t = adj[globalVals[1]][j + lowerBound];
+            if (t != INT_MAX) {
+                if (!visited[j] && ((globalVals[0] + t) < dist[j])) {
+                    dist[j] = globalVals[0] + t;
+                }
+            }
+
+        }
+
+    }
+
+    MPI_Gather(dist.data(), localCount, MPI_INT, globalDist.data(), localCount, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Finalize();
+
+    if (threadID == 0) {
+        for (int c: globalDist)
+            cout << c << " ";
+        cout << endl;
+    }
 }
+
 
 vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj) {
     unordered_set<int> vT;
@@ -72,32 +125,62 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int>>
     return l;
 }
 
-vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int>> adj) {
-    int threadID, threadCount;
-    int localVals[2] = {-1, INT_MAX};
-    int globalVals[2] = {-1, INT_MAX};
+vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<int> adj, vector<int> globalDist) {
+//    int threadID, threadCount;
+//    int localVals[2] = {-1, INT_MAX};
+//    int globalVals[2] = {-1, INT_MAX};
+//
+//    MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
+//    MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
+//
+//    int localCount = vertexCount/threadCount;
+//    int lowerBound = threadID * localCount;
+//    int upperBound = ((threadID + 1) * localCount) - 1;
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
-    MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
+//    vector<bool> visited(localCount, false);
+//    vector<int> dist(localCount, INT_MAX);
+//
+//    for(int i = 0 ; i < vertexCount ; i++)
+//        dist[i] = adj[START * vertexCount + i];
 
-    int localCount = vertexCount/threadCount;
-    int lowerBound = threadID * localCount;
-    int upperBound = ((threadID + 1) * localCount) - 1;
-
-    vector<bool> visited(localCount, false);
-    vector<int> dist(localCount, INT_MAX);
-
-    if(threadID == 0) visited[0] = true;
-
-    for(int i = 0 ; i < vertexCount ; i++) {
-        localVals[0] = -1;
-        localVals[1] = INT_MAX;
-
-        for(int j = 0 ; j < localCount ; j++){
-            if(visited[j] && dist[j] < )
-        }
-
-    }
+//    if(lowerBound <= START && START <= upperBound)
+//        visited[START - lowerBound] = true;
+//
+//    for(int i = 0 ; i < vertexCount ; i++) {
+//        localVals[0] = -1;
+//        localVals[1] = INT_MAX;
+//
+//        for(int j = 0 ; j < localCount ; j++){
+//            if(visited[j] && dist[j] < localVals[1]){
+//                localVals[0] = j;
+//                localVals[1] = dist[j];
+//            }
+//        }
+//
+//        MPI_Allreduce(localVals, globalVals, 1, MPI_2INTEGER, MPI_MINLOC, MPI_COMM_WORLD);
+//        MPI_Barrier(MPI_COMM_WORLD);
+//
+//        if(globalVals[0] == localVals[0])
+//            visited[localVals[0] - lowerBound] = true;
+//
+//        for(int j = 0 ; j < localCount ; j++){
+//            if(visited[j] && (localVals[1] +  adj[j][localVals[0]]) < dist[j]){
+//                dist[j] = (localVals[1] +  adj[j][localVals[0]]);
+//            }
+//        }
+//        MPI_Gather(dist.data(), localCount, MPI_INT, globalDist.data(), localCount, MPI_INT, 0, MPI_COMM_WORLD);
+//        MPI_Barrier(MPI_COMM_WORLD);
+//
+//        if(threadID == 0) {
+//            for (int c : globalDist) {
+//                cout << c << " ";
+//            }
+//            cout << "\n";
+//        }
+    //return dist;
+    //}
+    vector<int> f;
+    return f;
 }
 
 
@@ -151,7 +234,8 @@ vector<vector<int>> makeGraph(int &vertexCount, int &edgeCount, const string &fi
     vertexCount = graphInfo[0];
     edgeCount = graphInfo[1];
 
-    vector<vector<int>> adj(vertexCount, vector<int>(vertexCount, -1));
+    vector<vector<int>> adj(vertexCount, vector<int>(vertexCount, INT_MAX));
+    for (int i = 0; i < vertexCount; i++) adj[i][i] = 0;
     for (int i = 0; i < edgeCount; ++i) {
         string currNode, nodeItem;
         array<int, 3> nodeInfo;
@@ -167,6 +251,7 @@ vector<vector<int>> makeGraph(int &vertexCount, int &edgeCount, const string &fi
         adj[nodeInfo[0]][nodeInfo[1]] = nodeInfo[2];
         adj[nodeInfo[1]][nodeInfo[0]] = nodeInfo[2];
     }
+
 
     fileReader.close();
     return adj;
