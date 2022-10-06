@@ -24,25 +24,46 @@ void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 int main(int argc, char *argv[]) {
     double startTime = 0, parRunTime = 0, serRunTime = 0;
 
-    //int iterations = atoi(argv[2]);
     MPI_Init(NULL, NULL);
 
-    int vertexCount, edgeCount, threadID, threadCount;
+    int vertexCount, edgeCount, threadID, threadCount, flatSize, flatDist;
+    vector<int> serDij;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
 
-    vector<vector<int>> adj = makeGraph(vertexCount, edgeCount, argv[1]);
-
-    vector<int> globalDist(vertexCount, 0);
-    vector<int> serDij;
+//    vector<vector<int>> adj;
+    vector<int> flatAdj;
 
     if (threadID == 0) {
+        vector<vector<int>> adj = makeGraph(vertexCount, edgeCount, argv[1]);
+
+        flatSize = vertexCount * vertexCount;
+        flatDist = flatSize / threadCount;
+
+        vector<int> temp(flatSize, INT_MAX);
+        flatAdj = temp;
+
+        for (int i = 0; i < vertexCount; i++) {
+            for (int j = 0; j < vertexCount; j++) {
+                flatAdj[i * vertexCount + j] = adj[i][j];
+            }
+        }
+
         startTime = MPI_Wtime();
         serDij = serialDijkstra(vertexCount, START, adj);
         serRunTime = MPI_Wtime() - startTime;
-        startTime = MPI_Wtime();
     }
+    MPI_Bcast(&flatSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&flatDist, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&vertexCount, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    vector<int> localAdj(flatDist, INT_MAX);
+    MPI_Scatter(flatAdj.data(), flatDist, MPI_INT, localAdj.data(), flatDist, MPI_INT, 0, MPI_COMM_WORLD);
+
+    vector<int> globalDist(vertexCount, 0);
+
+    if (threadID == 0) startTime = MPI_Wtime();
 
     int localVals[2] = {INT_MAX, -1};
     int globalVals[2] = {INT_MAX, -1};
@@ -77,7 +98,7 @@ int main(int argc, char *argv[]) {
 
 
         for (int j = 0; j < localCount; j++) {
-            int t = adj[globalVals[1]][j + lowerBound];
+            int t = localAdj[j * vertexCount + globalVals[1]];
             if (t != INT_MAX) {
                 if (!visited[j] && ((globalVals[0] + t) < dist[j])) {
                     dist[j] = globalVals[0] + t;
@@ -92,6 +113,7 @@ int main(int argc, char *argv[]) {
         parRunTime = MPI_Wtime() - startTime;
 
     MPI_Gather(dist.data(), localCount, MPI_INT, globalDist.data(), localCount, MPI_INT, 0, MPI_COMM_WORLD);
+
     MPI_Finalize();
 
     if (threadID == 0) {
