@@ -36,10 +36,17 @@ int main(int argc, char *argv[]) {
     vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
     parRunTime += omp_get_wtime() - startTime;
 
+    for (auto c: serialDist)
+        cout << c << " ";
+    cout << endl;
+    for (auto c: parallelDist)
+        cout << c << " ";
+    cout << endl;
+
     if (serialDist != parallelDist)
         cout << "(Validation Failed!)";
     else
-        cout << serRunTime/parRunTime << "  (Validation Passed!)";
+        cout << serRunTime / parRunTime << "  (Validation Passed!)";
 //    cout << "Serial Time : " << serRunTime / iterations << endl;
 //    cout << "Parallel Time : " << parRunTime / iterations << endl;
 //    cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
@@ -64,7 +71,7 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> 
         vT.insert(u);
 
         for (int v = 0; v < vertexCount; v++) {
-            if (adj[v][u] != -1)
+            if (adj[v][u] != INT_MAX)
                 if (vT.find(v) == vT.end() && l[v] > l[u] + adj[v][u]) {
                     l[v] = l[u] + adj[v][u];
                     //parents[v] = u;
@@ -75,21 +82,16 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> 
 }
 
 vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
-    unordered_set<int> vT; //Keeps track of vertices explored
+    //unordered_set<int> vT; //Keeps track of vertices explored
+    vector<bool> vTn(vertexCount, false);
     vector<int> l(vertexCount, INT_MAX); //Need to subset per thread - keeps track of the min distance from startVertex
 
     int threadID, threadCount, localMin = INT_MAX, localU = -1, currentVert, threadBoundLeft, threadBoundRight;
     int u = -1, min = INT_MAX;
 
-    if (vertexCount % NUMTHREADS != 0) {
-        std::cerr << "Thread count given (" << NUMTHREADS << ") does not work with the number of vertices defined ("
-                  << vertexCount << ")\n";
-        return l;
-    }
-
     l[startVertex] = 0;
 
-#pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, startVertex)
+#pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vTn, min, u, adj, l, startVertex)
     {
         threadID = omp_get_thread_num();
         threadCount = omp_get_num_threads();
@@ -107,27 +109,26 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
             localMin = INT_MAX;
 
             for (int i = threadBoundLeft; i <= threadBoundRight; i++)
-                if (vT.find(i) == vT.end() && l[i] < localMin) localMin = l[i], localU = i;
+                if (!vTn[i] && l[i] < localMin) localMin = l[i], localU = i;
 
-            if (localMin < min) {
 #pragma omp critical
-                {
+            {
+                if (localMin < min) {
                     min = localMin;
                     u = localU;
                 }
             }
-
 #pragma omp barrier
 
-            if (u != -1) {
 #pragma omp single
-                vT.insert(u);
-            }
+            if (u != -1) vTn[u] = true;
+#pragma omp barrier
+
 
             if (u != -1) {
                 for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
-                    if (adj[i][u] != -1)
-                        if (vT.find(i) == vT.end() && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u];
+                    if (adj[i][u] != INT_MAX)
+                        if (!vTn[i] && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u];
                 }
             }
 
@@ -188,7 +189,7 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &f
     vertexCount = graphInfo[0];
     edgeCount = graphInfo[1];
 
-    vector<vector<int> > adj(vertexCount, vector<int>(vertexCount, -1));
+    vector<vector<int> > adj(vertexCount, vector<int>(vertexCount, INT_MAX));
     for (int i = 0; i < edgeCount; ++i) {
         string currNode, nodeItem;
         array<int, 3> nodeInfo;
