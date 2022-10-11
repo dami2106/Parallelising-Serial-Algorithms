@@ -9,11 +9,13 @@
 
 using namespace std;
 
-#define NUMTHREADS 8
+#define NUMTHREADS 2
 #define START 0
 
 vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
+
 void serialDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parents);
+
 void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parent);
 
 //The first argument argv[1] indicates which graph to run the algorithm on
@@ -43,9 +45,15 @@ int main(int argc, char *argv[]) {
     parRunTime += omp_get_wtime() - startTime;
 
     //Validate the parallel data against the serial distance array and serial parallel array
-    if ((serialDist != parallelDist) || (serialParents != parallelParents))
-        cout << "(Validation Failed!)";
-    else {
+    if ((serialDist != parallelDist) || (serialParents != parallelParents)) {
+        cout << "(Validation Failed!)\n";
+        for (int c: serialParents)
+            cout << c << " ";
+        cout << endl;
+        for (int c: parallelParents)
+            cout << c << " ";
+        cout << endl;
+    } else {
         cout << "(Validation Passed!)\n";
         cout << "Serial Time : " << serRunTime << endl;
         cout << "Parallel Time : " << parRunTime << endl;
@@ -60,6 +68,7 @@ int main(int argc, char *argv[]) {
 void serialDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parents) {
     unordered_set<int> vT; //Set to store visited vertices
     l[START] = 0; //Set the distance to the start vertex to 0
+    parents[START] = START; //Set the parent to the start vertex to the start vertex
 
     while ((int) vT.size() != vertexCount) {
         int u = -1, min = INT_MAX;
@@ -95,13 +104,15 @@ void serialDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, v
  * of the min distances and path from START to all other nodes
  */
 void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parent) {
-    vector<bool> vT(vertexCount, false); //A vector representing the visited set to store the visited vertices
+    //A vector representing the visited set to store the visited vertices
+    vector<bool> vT(vertexCount, false);
     //Variables initialised for use in the parallel code.
     int threadID, threadCount, localMin = INT_MAX, localU = -1, currentVert, threadBoundLeft, threadBoundRight;
     int u = -1, min = INT_MAX;
 
     //Set the distance to the start vertex to 0
     l[START] = 0;
+    parent[START] = START;
 
     //Create the parallel region while specifying the datascope of each of the above varaible
 #pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, parent)
@@ -128,21 +139,22 @@ void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l,
             localMin = INT_MAX;
 
             //For each thread's subset of data, find the min/the closest vertex to the current vertex
-            for (int i = threadBoundLeft; i <= threadBoundRight; i++)
+            for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
                 if (!vT[i] && l[i] < localMin) localMin = l[i], localU = i;
+            }
 
+            //If the current threads min is closer than the global min, update the global min
+            //1 thread at a time to avoid a race condition
 #pragma omp critical
             {
-                //If the current threads min is closer than the global min, update the global min
-                //1 thread at a time to avoid a race condition
                 if (localMin < min) {
                     min = localMin;
                     u = localU;
                 }
             }
 
-            //Synchronise threads
-#pragma omp barrier
+
+#pragma omp barrier //Synchronise threads
 
 #pragma omp single
             if (u != -1) vT[u] = true; //Set the current global closest vertex to visited by a single threads
@@ -151,12 +163,15 @@ void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l,
                 //For each vertex in the subset of vertices, update the current min distance and update the parent
                 //array if the new distance is closer than the previous
                 for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
-                    if (adj[i][u] != INT_MAX)
-                        if (!vT[i] && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u], parent[i] = u;;
+                    if (adj[i][u] != INT_MAX) {
+                        if (!vT[i] && l[i] > l[u] + adj[i][u]) {
+                            l[i] = l[u] + adj[i][u];
+                            parent[i] = u;
+                        }
+                    }
                 }
             }
-//Synchronise all threads again
-#pragma omp barrier
+#pragma omp barrier //Synchronise all threads again
         }
     }
 }

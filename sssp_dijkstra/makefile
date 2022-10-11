@@ -18,7 +18,7 @@ $(P2): $(P2).cpp
 	$(CC) $(CFLAGS) $(OMPFLAG) $(P2).cpp -o $(P2)
 
 $(P3): $(P3).cpp
-	$(MPICC) $(CFLAGS)  $(P3).cpp -o $(P3)
+	$(MPICC) $(OMPFLAG) $(CFLAGS) $(P3).cpp -o $(P3)
 
 clean:
 	rm -vf $(P1) $(P2) $(P3)
