@@ -10,54 +10,45 @@
 using namespace std;
 
 #define NUMTHREADS 8
+#define START 0
 
 vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
-
-vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj);
-
-vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj);
-
+void serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj, vector<int> &dist, vector<int> &parents);
+void parallelDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj, vector<int> &l, vector<int> &parent);
 void printPath(int vert, vector<int> parents);
-
 void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 
-//arg[1] = file name, arg[2] = iterations
 int main(int argc, char *argv[]) {
     int vertexCount, edgeCount, startVertex = 0;
-
-    vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
     double startTime, serRunTime = 0, parRunTime = 0;
 
+    vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
+
+    vector<int> serialDist(vertexCount, INT_MAX);
+    vector<int> serialParents(vertexCount, -1);
+    vector<int> parallelDist(vertexCount, INT_MAX);
+    vector<int> parallelParents(vertexCount, -1);
+
     startTime = omp_get_wtime();
-    vector<int> serialDist = serialDijkstra(vertexCount, startVertex, adj);
+    serialDijkstra(vertexCount, startVertex, adj, serialDist, serialParents);
     serRunTime += omp_get_wtime() - startTime;
 
     startTime = omp_get_wtime();
-    vector<int> parallelDist = parallelDijkstra(vertexCount, startVertex, adj);
+    parallelDijkstra(vertexCount, startVertex, adj, parallelDist, parallelParents);
     parRunTime += omp_get_wtime() - startTime;
 
-    for (auto c: serialDist)
-        cout << c << " ";
-    cout << endl;
-    for (auto c: parallelDist)
-        cout << c << " ";
-    cout << endl;
-
-    if (serialDist != parallelDist)
+    if ((serialDist != parallelDist) || (serialParents != parallelParents))
         cout << "(Validation Failed!)";
     else
-        cout << serRunTime / parRunTime << "  (Validation Passed!)";
+        cout <<  serRunTime/parRunTime << "  (Validation Passed!)";
 //    cout << "Serial Time : " << serRunTime / iterations << endl;
 //    cout << "Parallel Time : " << parRunTime / iterations << endl;
 //    cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
 }
 
-vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
+void serialDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj, vector<int> &l, vector<int> &parents) {
     unordered_set<int> vT;
-    vector<int> l(vertexCount, INT_MAX);
-    //vector<int> parents(vertexCount);
     l[startVertex] = 0;
-    //parents[startVertex] = -1;
 
     while ((int) vT.size() != vertexCount) {
         int u, min = INT_MAX;
@@ -74,24 +65,20 @@ vector<int> serialDijkstra(int vertexCount, int startVertex, vector<vector<int> 
             if (adj[v][u] != INT_MAX)
                 if (vT.find(v) == vT.end() && l[v] > l[u] + adj[v][u]) {
                     l[v] = l[u] + adj[v][u];
-                    //parents[v] = u;
+                    parents[v] = u;
                 }
         }
     }
-    return l;
 }
 
-vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
-    //unordered_set<int> vT; //Keeps track of vertices explored
-    vector<bool> vTn(vertexCount, false);
-    vector<int> l(vertexCount, INT_MAX); //Need to subset per thread - keeps track of the min distance from startVertex
-
-    int threadID, threadCount, localMin = INT_MAX, localU = -1, currentVert, threadBoundLeft, threadBoundRight;
+void parallelDijkstra(int vertexCount, int startVertex, vector<vector<int> > adj, vector<int> &l, vector<int> &parent) {
+    vector<bool> vT(vertexCount, false);
+    int threadID, threadCount, localMin = INT_MAX, localU = -1,currentVert, threadBoundLeft, threadBoundRight;
     int u = -1, min = INT_MAX;
 
     l[startVertex] = 0;
 
-#pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vTn, min, u, adj, l, startVertex)
+#pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, startVertex, parent)
     {
         threadID = omp_get_thread_num();
         threadCount = omp_get_num_threads();
@@ -109,7 +96,7 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
             localMin = INT_MAX;
 
             for (int i = threadBoundLeft; i <= threadBoundRight; i++)
-                if (!vTn[i] && l[i] < localMin) localMin = l[i], localU = i;
+                if (!vT[i] && l[i] < localMin) localMin = l[i], localU = i;
 
 #pragma omp critical
             {
@@ -121,21 +108,18 @@ vector<int> parallelDijkstra(int vertexCount, int startVertex, vector<vector<int
 #pragma omp barrier
 
 #pragma omp single
-            if (u != -1) vTn[u] = true;
+            if (u != -1) vT[u] = true;
 #pragma omp barrier
-
-
             if (u != -1) {
                 for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
                     if (adj[i][u] != INT_MAX)
-                        if (!vTn[i] && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u];
+                        if (!vT[i] && l[i] > l[u] + adj[i][u]) l[i] = l[u] + adj[i][u], parent[i] = u;;
                 }
             }
 
 #pragma omp barrier
         }
     }
-    return l;
 }
 
 

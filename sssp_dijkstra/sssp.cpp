@@ -9,9 +9,10 @@
 
 using namespace std;
 
-vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
-vector<int> dijkstra(int vertexCount, int startVertex, vector<vector<int> > adj);
+#define START 0
 
+vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
+void dijkstra(int vertexCount, int startVertex, vector<vector<int> > adj, vector<int> &dist, vector<int> &parents);
 void printPath(int vert, vector<int> parents);
 void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 
@@ -19,42 +20,42 @@ void printSolution(int startVertex, vector<int> distances, vector<int> parents);
 int main(int argc, char* argv[]) {
     int vertexCount, edgeCount, startVertex = 0;
     double startTime, runTime = 0;
-    //if(argv[1] == NULL) argv[1] = "graph_0"; //Fallback incase an argument is not given
 
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
+
+    vector<int> dist(vertexCount, INT_MAX);
+    vector<int> parents(vertexCount);
+
     startTime = omp_get_wtime();
-    vector<int> distance = dijkstra(vertexCount, startVertex, adj);
+    dijkstra(vertexCount, startVertex, adj, dist, parents);
     runTime = omp_get_wtime() - startTime;
+
     cout << runTime;
 }
 
-vector<int> dijkstra(int vertexCount, int startVertex, vector<vector<int> > adj) {
+void dijkstra(int vertexCount, int startVertex, vector<vector<int> > adj, vector<int> &l, vector<int> &parents) {
     unordered_set<int> vT;
-    vector<int> dist(vertexCount, INT_MAX);
-    vector<int> parents(vertexCount);
-    dist[startVertex] = 0;
-    parents[startVertex] = -1;
+    l[startVertex] = 0;
 
-    while ((int)vT.size() != vertexCount) {
+    while ((int) vT.size() != vertexCount) {
         int u, min = INT_MAX;
 
         for (int i = 0; i < vertexCount; i++)
-            if (vT.find(i) == vT.end() && dist[i] < min) {
-                min = dist[i];
+            if (vT.find(i) == vT.end() && l[i] < min) {
+                min = l[i];
                 u = i;
             }
 
         vT.insert(u);
 
         for (int v = 0; v < vertexCount; v++) {
-            if (adj[v][u] != -1)
-                if (vT.find(v) == vT.end() && dist[v] > dist[u] + adj[v][u]) {
-                    dist[v] = dist[u] + adj[v][u];
+            if (adj[v][u] != INT_MAX)
+                if (vT.find(v) == vT.end() && l[v] > l[u] + adj[v][u]) {
+                    l[v] = l[u] + adj[v][u];
                     parents[v] = u;
                 }
         }
     }
-    return dist;
 }
 
 
@@ -108,7 +109,7 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &f
     vertexCount = graphInfo[0];
     edgeCount = graphInfo[1];
 
-    vector<vector<int> > adj(vertexCount, vector<int>(vertexCount, -1));
+    vector<vector<int> > adj(vertexCount, vector<int>(vertexCount, INT_MAX));
     for (int i = 0; i < edgeCount; ++i) {
         string currNode, nodeItem;
         array<int, 3> nodeInfo;
