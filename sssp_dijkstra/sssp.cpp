@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     runTime = omp_get_wtime() - startTime;
 
     //Serial implementation has no speed up or validation so return the runtime
-    cout << runTime << endl;
+    cout << "Serial Time: " << runTime << endl;
 }
 
 /*

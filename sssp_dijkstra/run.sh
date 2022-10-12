@@ -1,5 +1,8 @@
 GRAPH=graph_7
-echo -------------Compiling Files-------------
+MPI_CORES=8
+OMP_CORES=8
+echo -------------Compiling Files and Setup-----------
+export OMP_NUM_THREADS=$OMP_CORES
 make
 echo -----------------------------------------
 echo
@@ -14,7 +17,7 @@ echo ------------OMP SSSP is starting---------------
 echo -------------OMP SSSP is done-------------
 echo
 echo ------------MPI SSSP is starting---------------
-mpirun -np 8 ./sssp_mpi $GRAPH |& tee -a terminal.out
+mpirun -np $MPI_CORES ./sssp_mpi $GRAPH |& tee -a terminal.out
 echo -------------OMP SSSP is done-------------
 echo
 echo -------------Cleaning Files-------------

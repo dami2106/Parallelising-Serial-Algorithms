@@ -5,56 +5,69 @@
 #include <vector>
 #include <random>
 #include <mpi.h>
+#include <omp.h>
 
 std::vector<int> generateArray(int N);
-
-void fullScan(std::vector<int> &in, std::vector<int> &out, int N);
-
+void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
 void mpiFullScan(std::vector<int> &in, int N);
 
-bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N);
-
 int main(int argc, char *argv[]) {
+    //Get the size of the array from the parameters
     int N = (int) pow(2, atoi(argv[1]));
-    int id;
+    int id; //Stores the ID of the current thread
+
+    //Set the variables used for timing
     double startTime, serRuntime = 0, parRuntime = 0;
+
+    //Set up an array to store the initial random array
     std::vector<int> in;
+    //Array to store the serial output
     std::vector<int> ser(N, 0);
 
+    //Start MPI
     MPI_Init(NULL, NULL);
+    //Get the current threads rank
     MPI_Comm_rank(MPI_COMM_WORLD, &id);
 
+    //Only need 1 thread at a time to do the setup
     if (id == 0) {
+        //Generate the randomised array
         in = generateArray(N);
+
+        //Time and do the parallel fullScan
         startTime = MPI_Wtime();
-        fullScan(in, ser, N);
+        serialFullScan(in, ser, N);
         serRuntime = MPI_Wtime() - startTime;
     }
 
+    //Synchronise all the threads
     MPI_Barrier(MPI_COMM_WORLD);
 
+    //Start the parallel timer using 1 thread
     if(id == 0)
-        startTime = MPI_Wtime();
+        startTime = omp_get_wtime();
 
+    //Call the parallel full scan implementation
     mpiFullScan(in, N);
 
+    //Stop the timer
     if(id == 0)
-        parRuntime = MPI_Wtime() - startTime;
+        parRuntime = omp_get_wtime() - startTime;
 
+    //Finalise the MPI call
     MPI_Finalize();
 
     if (id == 0) {
-        if (!compareScan(in, ser, N))
-            std::cout << "(Validation Failed!)";
-        else {
-            std::cout << serRuntime / parRuntime << "  (Validation Passed!)";
-//            std::cout << "Parallel FS gets: " << parRuntime / iter << "\nSerial FS gets: " << serRuntime / iter
-//                      << "\nWith a speed-up of: " << serRuntime / parRuntime << std::endl;
-//            std::cout << iter << " iterations used, for a list of size: 2^" << argv[1] << std::endl;
+        //Validate the parallel data against the serial sum array and serial parallel array
+        if (in != ser) {
+            std::cout << "(Validation Failed!)\n";
+        } else {
+            std::cout << "(Validation Passed!)\n";
+            std::cout << "Serial Time : " << serRuntime << std::endl;
+            std::cout << "Parallel Time : " << parRuntime << std::endl;
+            std::cout << "Speed-Up : " << (serRuntime / parRuntime) << std::endl;
         }
     }
-
-
     return 0;
 }
 
@@ -63,11 +76,13 @@ int main(int argc, char *argv[]) {
  */
 std::vector<int> generateArray(int N) {
     std::vector<int> arr(N, 0);
-
+    //Create a blank vector of size N
+    //Initialise a random device to randomly generate numbers to insert into the array
     std::random_device rd;
     std::mt19937 generator(rd());
-    std::uniform_int_distribution<> dist(0, 10);
+    std::uniform_int_distribution<> dist(1, 50);
 
+    //Insert the random numbers into the array
     for (int i = 0; i < N; i++)
         arr[i] = dist(generator);
 
@@ -77,8 +92,9 @@ std::vector<int> generateArray(int N) {
 /*
  * A function that performs a serial full scan on the given array
  */
-void fullScan(std::vector<int> &in, std::vector<int> &out, int N) {
-    out[0] = in[0];
+void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
+    out[0] = in[0]; //Set the first elements to be equal
+    //Perform serial full scan
     for (int i = 1; i < N; i++)
         out[i] = in[i] + out[i - 1];
 }
@@ -87,49 +103,46 @@ void fullScan(std::vector<int> &in, std::vector<int> &out, int N) {
  * A function that performs a distributed parallel full scan on the given array
  */
 void mpiFullScan(std::vector<int> &in, int N) {
+    //Initialise variables for each thread that will be used in the algorithm
     int threadCount, threadID, localN, localSum = 0, localIncrement = 0;
 
+    //Get the current thread rank and total thread count
     MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
+
+    //Get the size of the local array (size of the array each thread will have)
     localN = N / threadCount;
 
+    //Initialise 2 arrays that will be used to store the full scan sums for each thread
     std::vector<int> globalSum(threadCount, 0);
     std::vector<int> localIn(localN, 0);
 
+    //Scatter / distribute the main array to each thread
     MPI_Scatter(in.data(), localN, MPI_INT, localIn.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
-    //MPI_Barrier(MPI_COMM_WORLD);
 
+    //Compute the full scan sum for each thread on its subset of elements
     for (int i = 1; i < localN; i++) {
         localIn[i] += localIn[i - 1];
     }
+
+    //Set the cumulative end sum for each thread
     localSum = localIn[localN - 1];
 
-    //MPI_Barrier(MPI_COMM_WORLD);
+    //Gather the local sums (end values of the full scan) into the globalSums array to all threads
     MPI_Allgather(&localSum, 1, MPI_INT, globalSum.data(), 1, MPI_INT, MPI_COMM_WORLD);
-    //MPI_Barrier(MPI_COMM_WORLD);
 
-
-    //Need to sum up the globalSums
+    //Need to sum up the globalSums for each thread's position in the main vector
+    //Ensures the local array at position i gets the sum from the end element of array (i-1)
     for (int i = 0; i < threadID; i++) {
         localIncrement += globalSum[i];
     }
 
+    //For all local sums after the first one, add on the increment value
     if (localIncrement > 0) {
         for (int i = 0; i < localN; i++)
             localIn[i] += localIncrement;
     }
 
-    //MPI_Barrier(MPI_COMM_WORLD);
+    //Finally gather all the local array sums back into the original array for thread 0
     MPI_Gather(localIn.data(), localN, MPI_INT, in.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
-}
-
-/*
- * A function that checks that both arrays are equal (both have the same full scan)
- */
-bool compareScan(std::vector<int> &arrOne, std::vector<int> &arrTwo, int N) {
-    for (int i = 0; i < N; i++) {
-        if (arrOne[i] != arrTwo[i])
-            return false;
-    }
-    return true;
 }

@@ -9,13 +9,10 @@
 
 using namespace std;
 
-#define NUMTHREADS 2
 #define START 0
 
 vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
-
 void serialDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parents);
-
 void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parent);
 
 //The first argument argv[1] indicates which graph to run the algorithm on
@@ -45,14 +42,8 @@ int main(int argc, char *argv[]) {
     parRunTime += omp_get_wtime() - startTime;
 
     //Validate the parallel data against the serial distance array and serial parallel array
-    if ((serialDist != parallelDist) || (serialParents != parallelParents)) {
+    if ((serialDist != parallelDist)) {
         cout << "(Validation Failed!)\n";
-        for (int c: serialParents)
-            cout << c << " ";
-        cout << endl;
-        for (int c: parallelParents)
-            cout << c << " ";
-        cout << endl;
     } else {
         cout << "(Validation Passed!)\n";
         cout << "Serial Time : " << serRunTime << endl;
@@ -115,7 +106,7 @@ void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l,
     parent[START] = START;
 
     //Create the parallel region while specifying the datascope of each of the above varaible
-#pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, parent)
+#pragma omp parallel firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, parent)
     {
         threadID = omp_get_thread_num(); //Stores the current thread number
         threadCount = omp_get_num_threads(); //Stores the number of threads
@@ -127,9 +118,9 @@ void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l,
 
         //Iterate for every vertex in the graph
         for (currentVert = 0; currentVert < vertexCount; currentVert++) {
+//Allow a single thread to initialise and reset the global variables
 #pragma omp single
             {
-                //Allow a single thread to initialise and reset the global variables
                 u = -1;
                 min = INT_MAX;
             }
