@@ -11,6 +11,8 @@ std::vector<int> generateArray(int N);
 void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
 void mpiFullScan(std::vector<int> &in, int N);
 
+
+
 int main(int argc, char *argv[]) {
     //Get the size of the array from the parameters
     int N = (int) pow(2, atoi(argv[1]));
@@ -38,6 +40,7 @@ int main(int argc, char *argv[]) {
         startTime = MPI_Wtime();
         serialFullScan(in, ser, N);
         serRuntime = MPI_Wtime() - startTime;
+
     }
 
     //Synchronise all the threads

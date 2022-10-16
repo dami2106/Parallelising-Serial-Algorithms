@@ -10,9 +10,12 @@
 using namespace std;
 
 #define START 0
+#define NUMTHREADS 8
 
 vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
+
 void serialDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parents);
+
 void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parent);
 
 //The first argument argv[1] indicates which graph to run the algorithm on
@@ -42,13 +45,14 @@ int main(int argc, char *argv[]) {
     parRunTime += omp_get_wtime() - startTime;
 
     //Validate the parallel data against the serial distance array and serial parallel array
-    if ((serialDist != parallelDist)) {
+    if (serialDist != parallelDist) {
         cout << "(Validation Failed!)\n";
     } else {
         cout << "(Validation Passed!)\n";
         cout << "Serial Time : " << serRunTime << endl;
         cout << "Parallel Time : " << parRunTime << endl;
         cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
+        cout << "Efficiency : " << (serRunTime / parRunTime)/NUMTHREADS << endl;
     }
 }
 
@@ -106,7 +110,7 @@ void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l,
     parent[START] = START;
 
     //Create the parallel region while specifying the datascope of each of the above varaible
-#pragma omp parallel firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, parent)
+#pragma omp parallel num_threads(NUMTHREADS) firstprivate(localMin, localU) private(threadID, threadCount, currentVert, threadBoundLeft, threadBoundRight) shared(vT, min, u, adj, l, parent)
     {
         threadID = omp_get_thread_num(); //Stores the current thread number
         threadCount = omp_get_num_threads(); //Stores the number of threads
@@ -149,17 +153,19 @@ void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l,
 
 #pragma omp single
             if (u != -1) vT[u] = true; //Set the current global closest vertex to visited by a single threads
+
 #pragma omp barrier
             if (u != -1) {
                 //For each vertex in the subset of vertices, update the current min distance and update the parent
                 //array if the new distance is closer than the previous
                 for (int i = threadBoundLeft; i <= threadBoundRight; i++) {
-                    if (adj[i][u] != INT_MAX) {
+                    if (adj[i][u] != INT_MAX && l[u] != INT_MAX) {
                         if (!vT[i] && l[i] > l[u] + adj[i][u]) {
                             l[i] = l[u] + adj[i][u];
                             parent[i] = u;
                         }
                     }
+
                 }
             }
 #pragma omp barrier //Synchronise all threads again

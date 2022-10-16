@@ -6,7 +6,6 @@
 #include <fstream>
 #include <climits>
 #include <mpi.h>
-#include <omp.h>
 
 using namespace std;
 
@@ -81,18 +80,18 @@ int main(int argc, char *argv[]) {
 
     //Use thread 0 time get the time and validation data from the serial implementation
     if (threadID == 0) {
-        startTime = omp_get_wtime();
+        startTime = MPI_Wtime();
         serialDijkstra(vertexCount, adj, serialDist, serialParent);
-        serRunTime = omp_get_wtime() - startTime;
+        serRunTime = MPI_Wtime() - startTime;
     }
 
     //Synchronise all threads
     MPI_Barrier(MPI_COMM_WORLD);
 
     //Use thread 0 to time the parallel implementation as well as running the parallel implementation
-    if (threadID == 0) startTime = omp_get_wtime();
+    if (threadID == 0) startTime = MPI_Wtime();
     parallelDijkstra(vertexCount, localAdj, parallelDist, parallelParent);
-    if (threadID == 0) parRunTime = omp_get_wtime() - startTime;
+    if (threadID == 0) parRunTime = MPI_Wtime() - startTime;
 
     //Synchronise all threads
     MPI_Barrier(MPI_COMM_WORLD);
@@ -106,6 +105,7 @@ int main(int argc, char *argv[]) {
             cout << "Serial Time : " << serRunTime << endl;
             cout << "Parallel Time : " << parRunTime << endl;
             cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
+            cout << "Efficiency : " << (serRunTime / parRunTime)/threadCount << endl;
         }
     }
     MPI_Finalize();
