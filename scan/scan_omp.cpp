@@ -7,6 +7,8 @@
 #include <omp.h>
 #include <array>
 
+#define NUMTHREADS 8
+
 std::vector<int> generateArray(int N);
 void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
 void ompFullScan(std::vector<int> &in, int N);
@@ -40,6 +42,7 @@ int main(int argc, char *argv[]) {
         std::cout << "Serial Time : " << sRunTime << std::endl;
         std::cout << "Parallel Time : " << pRunTime << std::endl;
         std::cout << "Speed-Up : " << (sRunTime / pRunTime) << std::endl;
+        std::cout << "Efficiency : " << (sRunTime / pRunTime)/NUMTHREADS << std::endl;
     }
 
     return 0;
@@ -84,7 +87,7 @@ void ompFullScan(std::vector<int> &in, int N) {
     std::vector<int> incrementValues;
 
     //Start the parallel region
-#pragma omp parallel private(i, threadCount, threadID, threadBoundLeft, threadBoundRight) shared(in, N, globalSum, incrementValues)
+#pragma omp parallel num_threads(NUMTHREADS) private(i, threadCount, threadID, threadBoundLeft, threadBoundRight) shared(in, N, globalSum, incrementValues)
     {
         threadID = omp_get_thread_num(); //Stores the current threads rank
         threadCount = omp_get_num_threads(); //Stores the thread count

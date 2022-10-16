@@ -5,7 +5,6 @@
 #include <vector>
 #include <random>
 #include <mpi.h>
-#include <omp.h>
 
 std::vector<int> generateArray(int N);
 void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
@@ -16,7 +15,7 @@ void mpiFullScan(std::vector<int> &in, int N);
 int main(int argc, char *argv[]) {
     //Get the size of the array from the parameters
     int N = (int) pow(2, atoi(argv[1]));
-    int id; //Stores the ID of the current thread
+    int id, P; //Stores the ID of the current thread
 
     //Set the variables used for timing
     double startTime, serRuntime = 0, parRuntime = 0;
@@ -30,7 +29,7 @@ int main(int argc, char *argv[]) {
     MPI_Init(NULL, NULL);
     //Get the current threads rank
     MPI_Comm_rank(MPI_COMM_WORLD, &id);
-
+    MPI_Comm_size(MPI_COMM_WORLD, &P);
     //Only need 1 thread at a time to do the setup
     if (id == 0) {
         //Generate the randomised array
@@ -48,14 +47,14 @@ int main(int argc, char *argv[]) {
 
     //Start the parallel timer using 1 thread
     if(id == 0)
-        startTime = omp_get_wtime();
+        startTime = MPI_Wtime();
 
     //Call the parallel full scan implementation
     mpiFullScan(in, N);
 
     //Stop the timer
     if(id == 0)
-        parRuntime = omp_get_wtime() - startTime;
+        parRuntime = MPI_Wtime() - startTime;
 
     //Finalise the MPI call
     MPI_Finalize();
@@ -69,6 +68,7 @@ int main(int argc, char *argv[]) {
             std::cout << "Serial Time : " << serRuntime << std::endl;
             std::cout << "Parallel Time : " << parRuntime << std::endl;
             std::cout << "Speed-Up : " << (serRuntime / parRuntime) << std::endl;
+            std::cout << "Efficiency : " << (serRuntime / parRuntime)/P << std::endl;
         }
     }
     return 0;
@@ -83,7 +83,7 @@ std::vector<int> generateArray(int N) {
     //Initialise a random device to randomly generate numbers to insert into the array
     std::random_device rd;
     std::mt19937 generator(rd());
-    std::uniform_int_distribution<> dist(1, 50);
+    std::uniform_int_distribution<> dist(0, 10);
 
     //Insert the random numbers into the array
     for (int i = 0; i < N; i++)
