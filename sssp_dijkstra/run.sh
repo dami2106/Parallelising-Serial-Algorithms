@@ -1,4 +1,4 @@
-GRAPH=graph_3
+GRAPH=graph_7
 MPI_CORES=8
 
 echo -e "\e[1;90m━━━━━━━━━║ Compiling Files and Setup ║━━━━━━━━\e[0m"
