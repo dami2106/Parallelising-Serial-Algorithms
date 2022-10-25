@@ -118,8 +118,21 @@ void parallelBitonic(std::vector<int> &arr)
         }
     }
 }
+
+/*
+ * Checks if the provided argument is correct, exits if it isn't
+ */
+void checkInput(std::string arrSize) {
+    if (pow(2, stoi(arrSize)) < NUMTHREADS) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
+    if (stoi(arrSize) < 3 || stoi(arrSize) > 28) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
+}
+
 int main(int argc, char *argv[])
 {
+
+    //Check the input array size is correct
+    checkInput(argv[1]);
+
     // generate size of the array
     int N = (int)pow(2, atoi(argv[1]));
     std::vector<int> arr = generateArray(N);

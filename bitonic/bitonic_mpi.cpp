@@ -5,6 +5,14 @@
 #include <mpi.h>
 
 
+/*
+ * Checks if the provided argument is correct, exits if it isn't
+ */
+void checkInput(std::string arrSize, int threadCount) {
+    if (pow(2, stoi(arrSize)) < threadCount) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
+    if (stoi(arrSize) < 3 || stoi(arrSize) > 28) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
+}
+
  /*
   * Generate an array of size N with random elements between [1, 1000)
   */
@@ -210,8 +218,13 @@ void parallelBitonic(std::vector<int> &arr)
 }
 int main(int argc, char *argv[])
 {
+
+    //Check the input array size is correct
+    //checkInput(argv[1], threadCount);
+
     // generate arr
     int N = (int)pow(2, atoi(argv[1]));
+
     //Serial + time
     std::vector<int> arr = generateArray(N);
     
