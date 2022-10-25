@@ -88,33 +88,22 @@ void serialBitonic(std::vector<int> &arr)
 /**
  * parallel mpi bitonic implementation
  */
-void parallelBitonic(std::vector<int> &arr)
+void parallelBitonic(std::vector<int> &arr, int N)
 {
     int threadCount, threadID;
-    double parallelTime = 0, serialTime = 0;
-    int N = arr.size();
+
     // Initialize MPI
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
     MPI_Status status;
-
-    // Save a copy of the vector into serialArr, for serial bitonic
-    std::vector<int> seiralArr = arr;
     
     // divideNUmbers represents the numbers of element get in each thread
     int divideNumbers = N / threadCount;
-    // calculated parallel bitonic timing and start timer for MPI
-    if (threadID == 0)
-    {
-        serialTime = MPI_Wtime();
-        serialBitonic(seiralArr);
-        serialTime = MPI_Wtime() - serialTime;
-        parallelTime = MPI_Wtime();
-    }
 
     // create a temporary vector with numbers required in each threads
     std::vector<int> mpiArr(divideNumbers, 0);
+
     // Distribute the arr data equally to mpiArr, so each thread will get divideNumbers of elements
     MPI_Scatter(arr.data(), divideNumbers, MPI_INT, mpiArr.data(), divideNumbers, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -144,15 +133,14 @@ void parallelBitonic(std::vector<int> &arr)
                 }
                 
                 // send mpiArr data to destinationThread and receive mpiArr data to copyArr from destinationThread
-                MPI_Sendrecv(mpiArr.data(), divideNumbers, MPI_INT, destinationThread, 0, copyArr.data(), divideNumbers, MPI_INT, destinationThread, 0, MPI_COMM_WORLD, &status);
+                MPI_Sendrecv(mpiArr.data(), divideNumbers, MPI_INT, destinationThread, 0, copyArr.data(), divideNumbers, MPI_INT, destinationThread, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
                 //get multiple of both thread whether they are increasing or decreasing
                 int multiple = pow(-1, (int)((threadID*divideNumbers) / (pow(2,k)*2)));
                 //if cuurent thread number is less than destination thread number, we mutiply multiple by -1
                 if (threadID < destinationThread)
                 {
-                    multiple = multiple * -1;
-                }
+                    }
                 //comparing mpiArr data to copyArr, and decide whether to swap
                 for (int i = 0; i < divideNumbers; i++)
                 {
@@ -195,41 +183,73 @@ void parallelBitonic(std::vector<int> &arr)
     }
     // group all the data back into arr
     MPI_Allgather(mpiArr.data(), divideNumbers, MPI_INT, arr.data(), divideNumbers, MPI_INT, MPI_COMM_WORLD);
-    // verify is the parallel arr is the same as serialArr that the answer is correct
-
-
-    if (threadID == 0) {
-        parallelTime = MPI_Wtime() - parallelTime;
-
-        //Validate the parallel data against the serial sum array and serial parallel array
-        if (seiralArr != arr) {
-            std::cout << "(Validation Failed!)\n";
-        } else {
-            std::cout << "(Validation Passed!)\n";
-            std::cout << "Serial Time : " << serialTime << std::endl;
-            std::cout << "Parallel Time : " << parallelTime << std::endl;
-            std::cout << "Speed-Up : " << (serialTime / parallelTime) << std::endl;
-            std::cout << "Efficiency : " << (serialTime / parallelTime)/threadCount << std::endl;
-        }
-    }
-
-    // Close the MPI
-    MPI_Finalize();
 }
 int main(int argc, char *argv[])
 {
 
-    //Check the input array size is correct
-    //checkInput(argv[1], threadCount);
-
-    // generate arr
-    int N = (int)pow(2, atoi(argv[1]));
-
-    //Serial + time
-    std::vector<int> arr = generateArray(N);
+    // //Check the input array size is correct
+    // //checkInput(argv[1], threadCount);
     
-    // run parallel bitonic
-    parallelBitonic(arr);
+     //Get the size of the array from the parameters
+    int N = (int) pow(2, atoi(argv[1]));
+    int id, P; //Stores the ID of the current thread
 
+    //Set the variables used for timing
+    double startTime, serRuntime = 0, parRuntime = 0;
+
+    //Set up an array to store the initial random array
+    std::vector<int> arr;
+    //copy the input array into serialArr for serial bitonic
+    std::vector<int> seiralArr;
+    //Start MPI
+    MPI_Init(NULL, NULL);
+
+    //Get the current threads rank
+    MPI_Comm_rank(MPI_COMM_WORLD, &id);
+    MPI_Comm_size(MPI_COMM_WORLD, &P);
+
+    //Only need 1 thread at a time to do the setup
+    if (id == 0) {
+        //Check the input array size is correct
+        // checkInput(argv[1], P);
+
+        //Generate the randomised array
+        arr = generateArray(N);
+        seiralArr = arr;
+        //Time and do the parallel fullScan
+        startTime = MPI_Wtime();
+        serialBitonic(seiralArr);
+        serRuntime = MPI_Wtime() - startTime;
+    }
+
+    //Synchronise all the threads
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    //Start the parallel timer using 1 thread
+    if(id == 0)
+        startTime = MPI_Wtime();
+
+    //Call the parallel full scan implementation
+    parallelBitonic(arr, N);
+
+    //Stop the timer
+    if(id == 0)
+        parRuntime = MPI_Wtime() - startTime;
+
+    //Finalise the MPI call
+    MPI_Finalize();
+
+    if (id == 0) {
+        //Validate the parallel data against the serial sum array and serial parallel array
+        if (arr != seiralArr) {
+            std::cout << "(Validation Failed!)\n";
+        } else {
+            std::cout << "(Validation Passed!)\n";
+            std::cout << "Serial Time : " << serRuntime << std::endl;
+            std::cout << "Parallel Time : " << parRuntime << std::endl;
+            std::cout << "Speed-Up : " << (serRuntime / parRuntime) << std::endl;
+            std::cout << "Efficiency : " << (serRuntime / parRuntime)/P << std::endl;
+        }
+    }
     return 0;
 }
