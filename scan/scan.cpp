@@ -6,8 +6,8 @@
 #include <random>
 #include <omp.h>
 
-std::vector<int> generateArray(int N);
-void fullScan(std::vector<int> &in, std::vector<int> &out, int N);
+std::vector<long long> generateArray(int N);
+void fullScan(std::vector<long long> &in, std::vector<long long> &out, int N);
 
 int main(int argc, char *argv[]) {
     //Get the size of the array from the parameters
@@ -16,10 +16,10 @@ int main(int argc, char *argv[]) {
     double startTime, endTime = 0;
 
     //Generate an array of random elements of size N
-    std::vector<int> in = generateArray(N);
+    std::vector<long long> in = generateArray(N);
 
     //An array of 0s of size N used to store the result of full scan
-    std::vector<int> out(N, 0);
+    std::vector<long long> out(N, 0);
 
     //Time and call the serial full scan
     startTime = omp_get_wtime();
@@ -34,8 +34,8 @@ int main(int argc, char *argv[]) {
 /*
  * Generate an array of size N with random elements between [1, 50)
  */
-std::vector<int> generateArray(int N) {
-    std::vector<int> arr(N, 0);
+std::vector<long long> generateArray(int N) {
+    std::vector<long long> arr(N, 0);
     //Create a blank vector of size N
     //Initialise a random device to randomly generate numbers to insert into the array
     std::random_device rd;
@@ -52,7 +52,7 @@ std::vector<int> generateArray(int N) {
 /*
  * A function that performs a serial full scan on the given array
  */
-void fullScan(std::vector<int> &in, std::vector<int> &out, int N) {
+void fullScan(std::vector<long long> &in, std::vector<long long> &out, int N) {
     out[0] = in[0]; //Set the first elements to be equal
     //Perform serial full scan
     for (int i = 1; i < N; i++)

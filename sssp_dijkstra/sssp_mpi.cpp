@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
     vector<int> serialParent(vertexCount, 0);
 
     //Scatter the flattened adjacency matrix to each thread before running the parallel code
+    //Scatters before the code is called to ensure fair computation
     MPI_Scatter(flatAdj.data(), flatDist, MPI_INT, localAdj.data(), flatDist, MPI_INT, 0, MPI_COMM_WORLD);
 
     //Synchronise all threads

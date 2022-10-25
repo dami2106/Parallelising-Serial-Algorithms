@@ -5,7 +5,6 @@
 <!-- TOC -->
 
 ## Table of Contents:
-
 * [How to run & compile:](#how-to-run--compile-)
 * [Editing the number of cores and input size:](#editing-the-number-of-cores-and-input-size-)
     * [Editing the input size or graph](#editing-the-input-size-or-graph)
@@ -45,8 +44,9 @@ As stated above, each programs folder containts a `run.sh` file. Within this fil
 For Scan and Bitonic, at the top of the `run.sh`, 2 variables can be found: `ARRAY_SIZE` and `MPI_CORES`.
 Setting the array size variable allows the user to edit the array size the programs are run on. Pleae note,
 this array size is a power of 2, so inputting `ARRAY_SIZE=22` will set the input size to be 2<sup>22</sup> and not just
-22.
-Please note the bounds for this implementation is `3 ≤ ARRAY_SIZE ≤ 28` where 2<sup>3</sup> ≥ Number of Cores.
+22  
+Please note the bounds for this implementation is `3 ≤ ARRAY_SIZE ≤ 28`. Please ensure the lower bound is greater than
+or equal to the number of cores. In this case, where 2<sup>3</sup> ≥ P. 
 
 In the case of Dijsktra, where each implementation reads in a graph text file, there is a variable at the top of
 each `run.sh` file, namely `GRAPH`. Setting this to be any graph inside the directory allows you to run the
@@ -66,16 +66,13 @@ Setting this value to the desired cores allows you to edit the number of cores f
 In order to change the number of cores for the OMP implementation, please open the specific OMP
 implementation `xxx_omp.cpp` file
 and set the constant near the top of the file:
-
 ```c++ 
 #define NUMTHREADS = P
 ```
-
 Where `P` is the desired number of cores. Please also
 ensure to choose a value for P in the range: `2, 4, 8, 16, ...` in order to best fit each implementation.
 
 ## Project File Structure is as follows:
-
 ```
 PC-Assignment
 │   README.pdf
@@ -120,29 +117,23 @@ All files were written using the C++11 standard. Files were all compiled using t
 ## Examples of output for the separate collection of programs:
 
 ### Scan Example:
-
 ```
 cd scan
 ./run.sh
 ```
-
 ![img.png](scan_example.png)
 
 ### Bitonic Example:
-
 ```
 cd bitonic
 ./run.sh
 ```
-
 ![img.png](bitonic_example.png)
-
+  
 ### SSSP Example:
-
 ```
 cd sssp_dijkstra
 ./run.sh
 ```
-
 ![img.png](dijsktra_example.png)  
   

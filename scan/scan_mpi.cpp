@@ -6,11 +6,9 @@
 #include <random>
 #include <mpi.h>
 
-std::vector<int> generateArray(int N);
-void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
-void mpiFullScan(std::vector<int> &in, int N);
-
-
+std::vector<long long> generateArray(int N);
+void serialFullScan(std::vector<long long> &in, std::vector<long long> &out, int N);
+void mpiFullScan(std::vector<long long> &in, int N);
 
 int main(int argc, char *argv[]) {
     //Get the size of the array from the parameters
@@ -21,15 +19,17 @@ int main(int argc, char *argv[]) {
     double startTime, serRuntime = 0, parRuntime = 0;
 
     //Set up an array to store the initial random array
-    std::vector<int> in;
+    std::vector<long long> in;
     //Array to store the serial output
-    std::vector<int> ser(N, 0);
+    std::vector<long long > ser(N, 0);
 
     //Start MPI
     MPI_Init(NULL, NULL);
+
     //Get the current threads rank
     MPI_Comm_rank(MPI_COMM_WORLD, &id);
     MPI_Comm_size(MPI_COMM_WORLD, &P);
+
     //Only need 1 thread at a time to do the setup
     if (id == 0) {
         //Generate the randomised array
@@ -63,6 +63,13 @@ int main(int argc, char *argv[]) {
         //Validate the parallel data against the serial sum array and serial parallel array
         if (in != ser) {
             std::cout << "(Validation Failed!)\n";
+            for(long long c : in)
+                std::cout << c << " ";
+            std::cout << std::endl;
+            for(long long c : ser)
+                std::cout << c << " ";
+            std::cout << std::endl;
+
         } else {
             std::cout << "(Validation Passed!)\n";
             std::cout << "Serial Time : " << serRuntime << std::endl;
@@ -77,8 +84,8 @@ int main(int argc, char *argv[]) {
 /*
  * Generate an array of size N with random elements between [1, 50)
  */
-std::vector<int> generateArray(int N) {
-    std::vector<int> arr(N, 0);
+std::vector<long long> generateArray(int N) {
+    std::vector<long long> arr(N, 0);
     //Create a blank vector of size N
     //Initialise a random device to randomly generate numbers to insert into the array
     std::random_device rd;
@@ -95,7 +102,7 @@ std::vector<int> generateArray(int N) {
 /*
  * A function that performs a serial full scan on the given array
  */
-void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
+void serialFullScan(std::vector<long long> &in, std::vector<long long> &out, int N) {
     out[0] = in[0]; //Set the first elements to be equal
     //Perform serial full scan
     for (int i = 1; i < N; i++)
@@ -105,7 +112,7 @@ void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
 /*
  * A function that performs a distributed parallel full scan on the given array
  */
-void mpiFullScan(std::vector<int> &in, int N) {
+void mpiFullScan(std::vector<long long> &in, int N) {
     //Initialise variables for each thread that will be used in the algorithm
     int threadCount, threadID, localN, localSum = 0, localIncrement = 0;
 
@@ -117,11 +124,11 @@ void mpiFullScan(std::vector<int> &in, int N) {
     localN = N / threadCount;
 
     //Initialise 2 arrays that will be used to store the full scan sums for each thread
-    std::vector<int> globalSum(threadCount, 0);
-    std::vector<int> localIn(localN, 0);
+    std::vector<long long> globalSum(threadCount, 0);
+    std::vector<long long> localIn(localN, 0);
 
     //Scatter / distribute the main array to each thread
-    MPI_Scatter(in.data(), localN, MPI_INT, localIn.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(in.data(), localN, MPI_LONG_LONG_INT, localIn.data(), localN, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
     //Compute the full scan sum for each thread on its subset of elements
     for (int i = 1; i < localN; i++) {
@@ -132,7 +139,7 @@ void mpiFullScan(std::vector<int> &in, int N) {
     localSum = localIn[localN - 1];
 
     //Gather the local sums (end values of the full scan) into the globalSums array to all threads
-    MPI_Allgather(&localSum, 1, MPI_INT, globalSum.data(), 1, MPI_INT, MPI_COMM_WORLD);
+    MPI_Allgather(&localSum, 1, MPI_LONG_LONG_INT, globalSum.data(), 1, MPI_LONG_LONG_INT, MPI_COMM_WORLD);
 
     //Need to sum up the globalSums for each thread's position in the main vector
     //Ensures the local array at position i gets the sum from the end element of array (i-1)
@@ -147,5 +154,5 @@ void mpiFullScan(std::vector<int> &in, int N) {
     }
 
     //Finally gather all the local array sums back into the original array for thread 0
-    MPI_Gather(localIn.data(), localN, MPI_INT, in.data(), localN, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(localIn.data(), localN, MPI_LONG_LONG_INT, in.data(), localN, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 }
