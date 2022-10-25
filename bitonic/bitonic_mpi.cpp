@@ -52,10 +52,10 @@ void printLine(std::vector<int> &arr)
 void serialBitonic(std::vector<int> &arr)
 {
     int N = arr.size();
-    // k represents number of times of bitonic merge, so it is log2(N) times
+    // k represents number of times of bitonic converison(merge two bitonic sequence into one), so it is log2(N) times
     for (int k = 0; k < log2(N); ++k)
     {
-        // j represents number of times of bitonic sorts, so it is k times, but j is decreasing
+        // j represents number of times of bitonic-sorting, so it is k times, but j is decreasing
         for (int j = k; j >= 0; --j)
         {
             // each line will run number comparison, all line will run N/2 comparison
@@ -107,10 +107,10 @@ void parallelBitonic(std::vector<int> &arr, int N)
     // Distribute the arr data equally to mpiArr, so each thread will get divideNumbers of elements
     MPI_Scatter(arr.data(), divideNumbers, MPI_INT, mpiArr.data(), divideNumbers, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // k represents number of times of bitonic merge, so it is log2(N) times
+    // k represents number of times of bitonic converison(merge two bitonic sequence into one), so it is log2(N) times
     for (int k = 0; k < log2(N) ; ++k)
     {
-        // j represents number of times of bitonic sorts, so it is k times, but j is decreasing
+        // j represents number of times of bitonic-sorting, so it is k times, but j is decreasing
         for (int j = k; j >= 0; --j)
         {
             // if elements in the thread requires another elements in other thread(mpi sendRec)
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
     //Only need 1 thread at a time to do the setup
     if (id == 0) {
         //Check the input array size is correct
-        // checkInput(argv[1], P);
+        checkInput(argv[1], P);
 
         //Generate the randomised array
         arr = generateArray(N);
