@@ -18,10 +18,14 @@ void serialDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, v
 
 void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<int> &parent);
 
+void checkInput(string graphName);
+
 //The first argument argv[1] indicates which graph to run the algorithm on
 int main(int argc, char *argv[]) {
     int vertexCount, edgeCount; //Stores the variables needed for the algorithm (metadata about the current graph)
     double startTime, serRunTime = 0, parRunTime = 0; //Variables to keep track of the timing
+
+    checkInput(argv[1]); //Check the input graph is valid
 
     //Create the adjacency matrix and update the edge, vertex count variables for the given graph
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
@@ -52,8 +56,19 @@ int main(int argc, char *argv[]) {
         cout << "Serial Time : " << serRunTime << endl;
         cout << "Parallel Time : " << parRunTime << endl;
         cout << "Speed-Up : " << (serRunTime / parRunTime) << endl;
-        cout << "Efficiency : " << (serRunTime / parRunTime)/NUMTHREADS << endl;
+        cout << "Efficiency : " << (serRunTime / parRunTime) / NUMTHREADS << endl;
     }
+}
+
+
+/*
+ * Checks if the provided argument is correct, exits if it isn't
+ */
+void checkInput(string graphName) {
+    if (graphName.length() != 7) cout << "INCORRECT GRAPH NAME\n", exit(1);
+    if (graphName[5] != '_') cout << "INCORRECT GRAPH NAME\n", exit(1);
+    string graphNum(1, graphName[6]);
+    if (stoi(graphNum) < 0 || stoi(graphNum) > 7) cout << "INCORRECT GRAPH NAME\n", exit(1);
 }
 
 /*

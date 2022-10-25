@@ -12,12 +12,17 @@ using namespace std;
 #define START 0
 
 vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &fileName);
+
 void dijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &dist, vector<int> &parents);
 
+void checkInput(string graphName);
+
 //The first argument argv[1] indicates which graph to run the algorithm on
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     int vertexCount, edgeCount;    //Stores the variables needed for the algorithm
     double startTime, runTime = 0; //Needed to track the execution time
+
+    checkInput(argv[1]); //Check the input graph is valid
 
     //Create the adjacency matrix and update the edge, vertex count variables for the given graph
     vector<vector<int> > adj = makeGraph(vertexCount, edgeCount, argv[1]);
@@ -35,6 +40,18 @@ int main(int argc, char* argv[]) {
     cout << "Serial Time: " << runTime << endl;
 }
 
+
+/*
+ * Checks if the provided argument is correct, exits if it isn't
+ */
+void checkInput(string graphName) {
+    if (graphName.length() != 7) cout << "INCORRECT GRAPH NAME\n", exit(1);
+    if (graphName[5] != '_') cout << "INCORRECT GRAPH NAME\n", exit(1);
+    string graphNum(1, graphName[6]);
+    if (stoi(graphNum) < 0 || stoi(graphNum) > 7) cout << "INCORRECT GRAPH NAME\n", exit(1);
+}
+
+
 /*
  * Implementation of serial SSSP Dijkstra. Performs the algorithm on the given graph while keeping track
  * of the min distances and path from START to all other nodes
@@ -44,7 +61,7 @@ void dijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l, vector<
     l[START] = 0; //Set the distance to the start vertex to 0
 
     while ((int) vT.size() != vertexCount) {
-        int u = - 1, min = INT_MAX;
+        int u = -1, min = INT_MAX;
 
         //Iterate for every vertex
         for (int i = 0; i < vertexCount; i++)
