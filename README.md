@@ -5,27 +5,32 @@
 <!-- TOC -->
 
 ## Table of Contents:
-* [How to run & compile:](#how-to-run--compile-)
-* [Editing the number of cores and input size:](#editing-the-number-of-cores-and-input-size-)
+* [How to run & compile](#how-to-run--compile)
+* [Editing the number of cores and input size](#editing-the-number-of-cores-and-input-size)
     * [Editing the input size or graph](#editing-the-input-size-or-graph)
     * [Editing number of cores](#editing-number-of-cores)
-* [Project File Structure is as follows:](#project-file-structure-is-as-follows-)
-    * [Other information:](#other-information-)
-* [Examples of output for the separate collection of programs:](#examples-of-output-for-the-separate-collection-of-programs-)
-    * [Scan Example:](#scan-example-)
-    * [Bitonic Example:](#bitonic-example-)
-    * [SSSP Example:](#sssp-example-)
+* [Project File Structure is as follows](#project-file-structure-is-as-follows)
+    * [Other information](#other-information)
+* [Examples of output for the separate collection of programs](#examples-of-output-for-the-separate-collection-of-programs)
+    * [Scan Example](#scan-example)
+    * [Bitonic Example](#bitonic-example)
+    * [SSSP Example](#sssp-example)
 
 <!-- TOC -->
 
-## How to run & compile:
+## How to run & compile
 
 Each program is set up in its own folder (ie, scan, sssp_dijsktra, bitonic). Using a bash terminal, cd into the desired
 directory using the `cd` command - eg (`cd scan`) which them puts you into the directory of the scan program.
 
 The provided shell file for each program (run.sh - executed via `./run.sh`) will compile
 all 3 implementations, and then will run all 3 files (displaying the useful info to the screen)
-and will then discard the executables.
+and will then discard the executables. Please ensure if using a bash terminal, to set the correct permissions for the
+`run.sh` file. This can be done with the following command: 
+```shell
+./chmod +x run.sh
+```
+After this, you should be allowed to run the script.  
 
 The user does not need to manually run the makefile, though this is still possible if each file wants to be tested
 manually or individually.
@@ -35,9 +40,10 @@ Please ensure to have the correct version of g++, OpenMP, and OpenMPI installed
 
 *Please see examples at the bottom of the readme of running the different programs & output of each*
 
-## Editing the number of cores and input size:
+## Editing the number of cores and input size
 
-As stated above, each programs folder containts a `run.sh` file. Within this file there are some properties.
+As stated above, each program's folder containts a `run.sh` file. Within this file there are variables at the top of 
+the file that can be modified accordingly. Please see below for exact instructions of changing the behaviour of each program.
 
 ### Editing the input size or graph
 
@@ -72,7 +78,7 @@ and set the constant near the top of the file:
 Where `P` is the desired number of cores. Please also
 ensure to choose a value for P in the range: `2, 4, 8, 16, ...` in order to best fit each implementation.
 
-## Project File Structure is as follows:
+## Project File Structure is as follows
 ```
 PC-Assignment
 │   README.pdf
@@ -103,7 +109,7 @@ PC-Assignment
 │   │   bitonic_mpi.cpp   
 ```
 
-### Other information:
+### Other information
 
 All files were written using the C++11 standard. Files were all compiled using the following versions:
 
@@ -116,21 +122,21 @@ All files were written using the C++11 standard. Files were all compiled using t
 
 ## Examples of output for the separate collection of programs:
 
-### Scan Example:
+### Scan Example
 ```
 cd scan
 ./run.sh
 ```
 ![img.png](scan_example.png)
 
-### Bitonic Example:
+### Bitonic Example
 ```
 cd bitonic
 ./run.sh
 ```
 ![img.png](bitonic_example.png)
   
-### SSSP Example:
+### SSSP Example
 ```
 cd sssp_dijkstra
 ./run.sh
