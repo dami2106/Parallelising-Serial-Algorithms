@@ -10,9 +10,15 @@
 #define NUMTHREADS 8
 
 std::vector<int> generateArray(int N);
+
 void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
+
 void ompFullScan(std::vector<int> &in, int N);
+
 void checkInput(std::string arrSize);
+
+void ompBlelloch(std::vector<int> &in, int N);
+
 
 int main(int argc, char *argv[]) {
 
@@ -36,18 +42,26 @@ int main(int argc, char *argv[]) {
 
     //Time and call the parallel full scan
     startTime = omp_get_wtime();
-    ompFullScan(in, N);
+    ompBlelloch(in, N);
     pRunTime += omp_get_wtime() - startTime;
 
     //Validate the parallel data against the serial sum array and serial parallel array
     if (in != out) {
         std::cout << "(Validation Failed!)\n";
+        std::cout << "Serial:\n";
+        for (int c: out)
+            std::cout << c << " ";
+        std::cout << "\nParallel:\n";
+        for (int c: in)
+            std::cout << c << " ";
+        std::cout << "\n";
+
     } else {
         std::cout << "(Validation Passed!)\n";
         std::cout << "Serial Time : " << sRunTime << std::endl;
         std::cout << "Parallel Time : " << pRunTime << std::endl;
         std::cout << "Speed-Up : " << (sRunTime / pRunTime) << std::endl;
-        std::cout << "Efficiency : " << (sRunTime / pRunTime)/NUMTHREADS << std::endl;
+        std::cout << "Efficiency : " << (sRunTime / pRunTime) / NUMTHREADS << std::endl;
     }
 
     return 0;
@@ -70,7 +84,7 @@ std::vector<int> generateArray(int N) {
     //Initialise a random device to randomly generate numbers to insert into the array
     std::random_device rd;
     std::mt19937 generator(rd());
-    std::uniform_int_distribution<> dist(1, 50);
+    std::uniform_int_distribution<> dist(0, 10);
 
     //Insert the random nubmers into the array
     for (int i = 0; i < N; i++)
@@ -87,6 +101,58 @@ void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
     //Perform serial full scan
     for (int i = 1; i < N; i++)
         out[i] = in[i] + out[i - 1];
+}
+
+/*
+ * A function that performs a parallel blelloch scan on the given array
+ */
+void ompBlelloch(std::vector<int> &in, int N) {
+    //Initialise varaibels needed in the algorithm
+    int d, k, inc, ind1, ind2, i, t, temp;
+    //Create the parallel region
+#pragma omp parallel shared(in) private(d, k, inc, ind1, ind2, i, t, temp)
+    {
+        //Perform the up sweep(reduction) on the data by referencing a tree in memory
+        //And adding up paired elements
+        //Here the tree is traversed from the root node to the leaf nodes
+        for (d = 0; d < (int) log2(N); d++) {
+            inc = (int) pow(2, d + 1);
+#pragma omp for
+            for (k = 0; k < N - 1; k += inc) {
+                ind1 = k + inc - 1;
+                ind2 = k + (int) pow(2, d) - 1;
+
+                if (ind1 < N && ind2 < N)
+                    in[ind1] += in[ind2];
+
+            }
+        }
+        //The root node of the tree now holds the max sum value of the array
+
+        //We then backup the end element and set it to 0 in order to do a pre scan
+#pragma omp single copyprivate(temp)
+        {
+            temp = in[N - 1];
+            in[N - 1] = 0;
+        }
+
+//We now perform down sweep on the tree,
+        for (d = log2(N) - 1; d >= 0; --d) {
+            inc = (int) pow(2, d + 1);
+#pragma omp for
+            for (i = 0; i <= N - 1; i += inc) {
+                t = in[i + pow(2, d) - 1];
+                in[i + pow(2, d) - 1] = in[i + pow(2, d + 1) - 1];
+                in[i + pow(2, d + 1) - 1] = t + in[i + pow(2, d + 1) - 1];
+            }
+        }
+
+#pragma omp single
+        {
+            in.push_back(temp);
+            in.erase(in.begin());
+        }
+    }
 }
 
 /*

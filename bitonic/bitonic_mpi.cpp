@@ -126,7 +126,7 @@ void parallelBitonic(std::vector<int> &arr, int N) {
 
                 //get multiple of both thread whether they are increasing or decreasing
                 int multiple = pow(-1, (int) ((threadID * divideNumbers) / (pow(2, k) * 2)));
-                //if cuurent thread number is less than destination thread number, we mutiply multiple by -1
+                //if curent thread number is less than destination thread number, we mutiply multiple by -1
                 if (threadID < destinationThread) {
                     multiple = multiple * -1;
                 }
@@ -138,7 +138,7 @@ void parallelBitonic(std::vector<int> &arr, int N) {
                     }
                 }
             } else {
-                // N/2 comparsion will run on each threads 
+                // N/2 comparison will run on each threads
                 for (int i = 0; i < divideNumbers / 2; i++) {
                     // numberDifference is used for number 1 and number 2 separation and different number1 with the increased on i
                     int numDiff = pow(2, j);
