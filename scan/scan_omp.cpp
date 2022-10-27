@@ -147,6 +147,7 @@ void ompBlelloch(std::vector<int> &in, int N) {
             }
         }
 
+        //We then need to convert the pre-scan to the inclusive scan by "shifting" to the right and restoring the max
 #pragma omp single
         {
             in.push_back(temp);
