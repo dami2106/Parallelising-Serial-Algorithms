@@ -60,9 +60,6 @@ int main(int argc, char *argv[]) {
     if(id == 0)
         parRuntime = MPI_Wtime() - startTime;
 
-    //Finalise the MPI call
-    MPI_Finalize();
-
     if (id == 0) {
         //Validate the parallel data against the serial sum array and serial parallel array
         if (in != ser) {
@@ -75,6 +72,10 @@ int main(int argc, char *argv[]) {
             std::cout << "Efficiency : " << (serRuntime / parRuntime)/P << std::endl;
         }
     }
+
+    //Finalise the MPI call
+    MPI_Finalize();
+
     return 0;
 }
 
