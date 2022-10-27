@@ -107,7 +107,7 @@ void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
  * A function that performs a parallel blelloch scan on the given array
  */
 void ompBlelloch(std::vector<int> &in, int N) {
-    //Initialise varaibels needed in the algorithm
+    //Initialise variables needed in the algorithm
     int d, k, inc, ind1, ind2, i, t, temp;
     //Create the parallel region
 #pragma omp parallel shared(in) private(d, k, inc, ind1, ind2, i, t, temp)
@@ -129,7 +129,7 @@ void ompBlelloch(std::vector<int> &in, int N) {
         }
         //The root node of the tree now holds the max sum value of the array
 
-        //We then backup the end element and set it to 0 in order to do a pre scan
+        //We then back up the end element and set it to 0 in order to do a pre scan
 #pragma omp single copyprivate(temp)
         {
             temp = in[N - 1];
@@ -147,7 +147,7 @@ void ompBlelloch(std::vector<int> &in, int N) {
             }
         }
 
-        //We then need to convert the pre-scan to the inclusive scan by "shifting" to the right and restoring the max
+        //We then need to convert the pre-scan to the inclusive scan by "shifting" to the left and restoring the max
 #pragma omp single
         {
             in.push_back(temp);
