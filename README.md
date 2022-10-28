@@ -127,7 +127,7 @@ All files were written using the C++11 standard. Files were all compiled using t
 cd scan
 ./run.sh
 ```
-![img.png](scan_example.png)
+![img.png](scan_example_new.png)
 
 ### Bitonic Example
 ```
