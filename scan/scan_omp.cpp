@@ -28,10 +28,12 @@ int main(int argc, char *argv[]) {
     //Get the size of the array from the parameters
     int N = (int) pow(2, atoi(argv[1]));
     //Set the variables used for timing
-    double startTime, sRunTime = 0, pRunTime = 0;
+    double startTime, sRunTime = 0, pRunTime = 0, bleRunTime = 0;
 
-    //Generate an array of random elements of size N
+    //Generate an array of random elements of size N and back it up
     std::vector<int> in = generateArray(N);
+    std::vector<int> blIn = in;
+
     //An array of 0s of size N used to store the result of serial full scan
     std::vector<int> out(N, 0);
 
@@ -40,28 +42,26 @@ int main(int argc, char *argv[]) {
     serialFullScan(in, out, N);
     sRunTime += omp_get_wtime() - startTime;
 
-    //Time and call the parallel full scan
+    //Time and call the classic blelloch
     startTime = omp_get_wtime();
     ompBlelloch(in, N);
     pRunTime += omp_get_wtime() - startTime;
 
-    //Validate the parallel data against the serial sum array and serial parallel array
-    if (in != out) {
-        std::cout << "(Validation Failed!)\n";
-        std::cout << "Serial:\n";
-        for (int c: out)
-            std::cout << c << " ";
-        std::cout << "\nParallel:\n";
-        for (int c: in)
-            std::cout << c << " ";
-        std::cout << "\n";
+    //Time and call the naive blelloch
+    startTime = omp_get_wtime();
+    ompFullScan(blIn, N);
+    bleRunTime += omp_get_wtime() - startTime;
 
+    //Validate the parallel data against the serial sum array and serial parallel array
+    if ((in != out) || (blIn != out)) {
+        std::cout << "(Validation Failed!)\n";
     } else {
         std::cout << "(Validation Passed!)\n";
-        std::cout << "Serial Time : " << sRunTime << std::endl;
-        std::cout << "Parallel Time : " << pRunTime << std::endl;
-        std::cout << "Speed-Up : " << (sRunTime / pRunTime) << std::endl;
-        std::cout << "Efficiency : " << (sRunTime / pRunTime) / NUMTHREADS << std::endl;
+        std::cout << "Serial Time : " << sRunTime << std::endl << std::endl;
+        std::cout << "Classic Blelloch Parallel Time : " << pRunTime << std::endl;
+        std::cout << "Classic Blelloch Speed-Up : " << (sRunTime / pRunTime) << std::endl << std::endl;
+        std::cout << "Naive Blocking Blelloch Parallel Time : " << bleRunTime << std::endl;
+        std::cout << "Naive Blocking Blelloch Speed-Up : " << (sRunTime / bleRunTime) << std::endl;
     }
 
     return 0;
@@ -103,14 +103,16 @@ void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
         out[i] = in[i] + out[i - 1];
 }
 
+
+
 /*
- * A function that performs a parallel blelloch scan on the given array
+ * A function that performs a work efficient blelloch scan on the array
  */
 void ompBlelloch(std::vector<int> &in, int N) {
     //Initialise variables needed in the algorithm
     int d, k, inc, ind1, ind2, i, t, temp;
     //Create the parallel region
-#pragma omp parallel shared(in) private(d, k, inc, ind1, ind2, i, t, temp)
+#pragma omp parallel num_threads(NUMTHREADS) shared(in) private(d, k, inc, ind1, ind2, i, t, temp)
     {
         //Perform the up sweep(reduction) on the data by referencing a tree in memory
         //And adding up paired elements
@@ -156,8 +158,9 @@ void ompBlelloch(std::vector<int> &in, int N) {
     }
 }
 
+
 /*
- * A function that performs a parallel full scan on the given array
+ * A function that performs a naive blelloch scan on the array
  */
 void ompFullScan(std::vector<int> &in, int N) {
     //Initialise variables needed for the parallel execution
