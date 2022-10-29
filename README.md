@@ -80,9 +80,8 @@ ensure to choose a value for P in the range: `2, 4, 8, 16, ...` in order to best
 
 ## Project File Structure is as follows
 ```
-PC-Assignment
+src_2303289_2302891
 │   README.pdf
-│   report_2303289_2302891.pdf
 │
 └───scan
 │   │   makefile
@@ -90,7 +89,6 @@ PC-Assignment
 │   │   scan.cpp
 │   │   scan_omp.cpp
 │   │   scan_mpi.cpp
-│   
 │   
 └───sssp_dijsktra
 │   └───graphs
@@ -100,7 +98,6 @@ PC-Assignment
 │   │   sssp_omp.cpp      
 │   │   sssp_mpi.cpp     
 │
-│  
 └───bitonic
 │   │   makefile
 │   │   run.sh
