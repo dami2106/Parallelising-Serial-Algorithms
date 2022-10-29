@@ -7,7 +7,7 @@ echo
 echo -e "\e[1;36m━━━━━━━━━║ Array is size: 2^$ARRAY_SIZE ║━━━━━━━━━\e[0m"
 echo
 echo -e "\e[1;97m━━━━━━━━━━║ Serial Bitonic  ║━━━━━━━━━━ \e[0m"
-SER=$(./bitonic $ARRAY_SIZE |& tee -a terminal.out)
+SER=$(./bitonicsort $ARRAY_SIZE |& tee -a terminal.out)
 echo -e "\e[1;92m$SER\e[0m"
 echo -e "\e[1;97m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ \e[0m"
 echo

@@ -43,9 +43,9 @@ void printLine(std::vector<int> &arr) {
  */
 void serialBitonic(std::vector<int> &arr) {
     int N = arr.size();
-    // k represents number of times of bitonic converison(merge two bitonic sequence into one), so it is log2(N) times
+    // k represents number of times of bitonicsort converison(merge two bitonicsort sequence into one), so it is log2(N) times
     for (int k = 0; k < log2(N); ++k) {
-        // j represents number of times of bitonic-sorting, so it is k times, but j is decreasing
+        // j represents number of times of bitonicsort-sorting, so it is k times, but j is decreasing
         for (int j = k; j >= 0; --j) {
             // each line will run number comparison, all line will run N/2 comparison
             for (int i = 0; i < N / 2; ++i) {
@@ -78,9 +78,9 @@ void serialBitonic(std::vector<int> &arr) {
  */
 void parallelBitonic(std::vector<int> &arr) {
     int N = arr.size();
-    // k represents number of times of bitonic converison(merge two bitonic sequence into one), so it is log2(N) times
+    // k represents number of times of bitonicsort converison(merge two bitonicsort sequence into one), so it is log2(N) times
     for (int k = 0; k < log2(N); ++k) {
-        // j represents number of times of bitonic-sorting, so it is k times, but j is decreasing
+        // j represents number of times of bitonicsort-sorting, so it is k times, but j is decreasing
         for (int j = k; j >= 0; --j) {
             // using parallel for to parallize the follwing for loop, so the N/2 comparsion will run in parallel
 #pragma omp parallel for num_threads(NUMTHREADS) shared(N, arr, k, j) default(none)

@@ -50,9 +50,9 @@ void printLine(std::vector<int> &arr) {
  */
 void serialBitonic(std::vector<int> &arr) {
     int N = arr.size();
-    // k represents number of times of bitonic converison(merge two bitonic sequence into one), so it is log2(N) times
+    // k represents number of times of bitonicsort converison(merge two bitonicsort sequence into one), so it is log2(N) times
     for (int k = 0; k < log2(N); ++k) {
-        // j represents number of times of bitonic-sorting, so it is k times, but j is decreasing
+        // j represents number of times of bitonicsort-sorting, so it is k times, but j is decreasing
         for (int j = k; j >= 0; --j) {
             // each line will run number comparison, all line will run N/2 comparison
             for (int i = 0; i < N / 2; ++i) {
@@ -81,7 +81,7 @@ void serialBitonic(std::vector<int> &arr) {
 }
 
 /**
- * parallel mpi bitonic implementation
+ * parallel mpi bitonicsort implementation
  */
 void parallelBitonic(std::vector<int> &arr, int N) {
     int threadCount, threadID;
@@ -101,16 +101,16 @@ void parallelBitonic(std::vector<int> &arr, int N) {
     // Distribute the arr data equally to mpiArr, so each thread will get divideNumbers of elements
     MPI_Scatter(arr.data(), divideNumbers, MPI_INT, mpiArr.data(), divideNumbers, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // k represents number of times of bitonic converison(merge two bitonic sequence into one), so it is log2(N) times
+    // k represents number of times of bitonicsort converison(merge two bitonicsort sequence into one), so it is log2(N) times
     for (int k = 0; k < log2(N); ++k) {
-        // j represents number of times of bitonic-sorting, so it is k times, but j is decreasing
+        // j represents number of times of bitonicsort-sorting, so it is k times, but j is decreasing
         for (int j = k; j >= 0; --j) {
             // if elements in the thread requires another elements in other thread(mpi sendRec)
             if ((2 * pow(2, j)) > divideNumbers) {
                 //initialized a copy array to receive the data from another threads
 
                 std::vector<int> mArr(divideNumbers, 0);
-                //find the thread difference with the current iteration number of bitonic sorting
+                //find the thread difference with the current iteration number of bitonicsort sorting
                 //division is thread number difference and determines which division is the current thread on
                 int division = pow(2, j) / divideNumbers;
                 int destinationThread = 0;
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
 
     //Set up an array to store the initial random array
     std::vector<int> arr;
-    //copy the input array into serialArr for serial bitonic
+    //copy the input array into serialArr for serial bitonicsort
     std::vector<int> seiralArr;
 
     //Start MPI

@@ -20,7 +20,7 @@
 
 ## How to run & compile
 
-Each program is set up in its own folder (ie, scan, sssp_dijsktra, bitonic). Using a bash terminal, cd into the desired
+Each program is set up in its own folder (ie, scan, sssp_dijsktra, bitonicsort). Using a bash terminal, cd into the desired
 directory using the `cd` command - eg (`cd scan`) which them puts you into the directory of the scan program.
 
 The provided shell file for each program (run.sh - executed via `./run.sh`) will compile
@@ -98,7 +98,7 @@ src_2303289_2302891
 │   │   sssp_omp.cpp      
 │   │   sssp_mpi.cpp     
 │
-└───bitonic
+└───bitonicsort
 │   │   makefile
 │   │   run.sh
 │   │   bitonic.cpp  
