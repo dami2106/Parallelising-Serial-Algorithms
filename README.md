@@ -30,7 +30,7 @@ and will then discard the executables. Please ensure if using a bash terminal, t
 ```shell
 ./chmod +x run.sh
 ```
-After this, you should be allowed to run the script.  
+After this, you should be allowed to run the script using `./run.sh` in terminal as stated.  
 
 The user does not need to manually run the makefile, though this is still possible if each file wants to be tested
 manually or individually.
@@ -42,7 +42,7 @@ Please ensure to have the correct version of g++, OpenMP, and OpenMPI installed
 
 ## Editing the number of cores and input size
 
-As stated above, each program's folder containts a `run.sh` file. Within this file there are variables at the top of 
+As stated above, each program's folder contains a `run.sh` file. Within this file there are variables at the top of 
 the file that can be modified accordingly. Please see below for exact instructions of changing the behaviour of each program.
 
 ### Editing the input size or graph
@@ -54,13 +54,13 @@ this array size is a power of 2, so inputting `ARRAY_SIZE=22` will set the input
 Please note the bounds for this implementation is `3 ≤ ARRAY_SIZE ≤ 28`. Please ensure the lower bound is greater than
 or equal to the number of cores. In this case, where 2<sup>3</sup> ≥ P. 
 
-In the case of Dijsktra, where each implementation reads in a graph text file, there is a variable at the top of
+In the case of Dijkstra, where each implementation reads in a graph text file, there is a variable at the top of
 each `run.sh` file, namely `GRAPH`. Setting this to be any graph inside the directory allows you to run the
 implementation
-on that graph. For example, `GRAPH=graph_5` will run dijsktra on the given graph 5. Please note that the only valid
+on that graph. For example, `GRAPH=graph_5` will run Dijkstra on the given graph 5. Please note that the only valid
 graph
 inputs are those in the range `graph_0, graph_1, ..., graph_7`. Please also ensure that the number of vertices in the
-graph are atleast
+graph are at least
 as many as the number of cores else the algorithm will not run. IE, running graph_0 (which contains 6 vertices)
 on a run with 16 cores will be invalid.
 
@@ -127,7 +127,7 @@ All files were written using the C++11 standard. Files were all compiled using t
 cd scan
 ./run.sh
 ```
-![img.png](scan_example_new.png)
+![img.png](scanexample.png)
 
 ### Bitonic Example
 ```
