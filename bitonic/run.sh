@@ -1,4 +1,4 @@
-ARRAY_SIZE=26 #Please note that this is not 26 elements but rather 2^26 elements
+ARRAY_SIZE=20 #Please note that this is not 20 elements but rather 2^20 elements
 MPI_CORES=8
 
 echo -e "\e[1;90m━━━━━━━━━║ Compiling Files and Setup ║━━━━━━━━\e[0m"-
