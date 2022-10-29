@@ -28,7 +28,7 @@ all 3 implementations, and then will run all 3 files (displaying the useful info
 and will then discard the executables. Please ensure if using a bash terminal, to set the correct permissions for the
 `run.sh` file. This can be done with the following command: 
 ```shell
-./chmod +x run.sh
+chmod +x run.sh
 ```
 After this, you should be allowed to run the script using `./run.sh` in terminal as stated.  
 
