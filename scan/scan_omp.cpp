@@ -6,8 +6,9 @@
 #include <random>
 #include <omp.h>
 #include <array>
+#include <algorithm>
 
-#define NUMTHREADS 8
+#define NUMTHREADS 16
 
 std::vector<int> generateArray(int N);
 
@@ -40,17 +41,17 @@ int main(int argc, char *argv[]) {
     //Time and call the serial full scan
     startTime = omp_get_wtime();
     serialFullScan(in, out, N);
-    sRunTime += omp_get_wtime() - startTime;
+    sRunTime = omp_get_wtime() - startTime;
 
     //Time and call the classic blelloch
     startTime = omp_get_wtime();
     ompBlelloch(in, N);
-    pRunTime += omp_get_wtime() - startTime;
+    pRunTime = omp_get_wtime() - startTime;
 
     //Time and call the naive blelloch
     startTime = omp_get_wtime();
     ompFullScan(blIn, N);
-    bleRunTime += omp_get_wtime() - startTime;
+    bleRunTime = omp_get_wtime() - startTime;
 
     //Validate the parallel data against the serial sum array and serial parallel array
     if ((in != out) || (blIn != out)) {
@@ -110,50 +111,52 @@ void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
  */
 void ompBlelloch(std::vector<int> &in, int N) {
     //Initialise variables needed in the algorithm
-    int d, k, inc, ind1, ind2, i, t, temp;
+    int d, k, inc, ind1, ind2, i, t, temp, inc2;
     //Create the parallel region
-#pragma omp parallel num_threads(NUMTHREADS) shared(in) private(d, k, inc, ind1, ind2, i, t, temp)
+#pragma omp parallel num_threads(NUMTHREADS) shared(in, temp) private(d, k, inc, ind1, ind2, i, t, inc2)
     {
         //Perform the up sweep(reduction) on the data by referencing a tree in memory
         //And adding up paired elements
         //Here the tree is traversed from the root node to the leaf nodes
         for (d = 0; d < (int) log2(N); d++) {
-            inc = (int) pow(2, d + 1);
+            inc = (1 << (d + 1)); //Bit shift inc , same as writing 2^(d+1) just faster
+            inc2 = (1 << d); //Bit shift inc2, same as writing 2^d, just faster
 #pragma omp for
             for (k = 0; k < N - 1; k += inc) {
                 ind1 = k + inc - 1;
-                ind2 = k + (int) pow(2, d) - 1;
-
-                if (ind1 < N && ind2 < N)
-                    in[ind1] += in[ind2];
-
+                ind2 = k + inc2 - 1;
+                in[ind1] += in[ind2];
             }
         }
         //The root node of the tree now holds the max sum value of the array
 
         //We then back up the end element and set it to 0 in order to do a pre scan
-#pragma omp single copyprivate(temp)
+
+
+#pragma omp single
         {
             temp = in[N - 1];
             in[N - 1] = 0;
         }
 
+
 //We now perform down sweep on the tree,
         for (d = log2(N) - 1; d >= 0; --d) {
-            inc = (int) pow(2, d + 1);
+            inc = (1 << (d + 1));
+            inc2 = (1 << d);
 #pragma omp for
             for (i = 0; i <= N - 1; i += inc) {
-                t = in[i + pow(2, d) - 1];
-                in[i + pow(2, d) - 1] = in[i + pow(2, d + 1) - 1];
-                in[i + pow(2, d + 1) - 1] = t + in[i + pow(2, d + 1) - 1];
+                t = in[i + inc2 - 1];
+                in[i + inc2 - 1] = in[i + inc - 1];
+                in[i + inc - 1] = t + in[i + inc - 1];
             }
         }
 
         //We then need to convert the pre-scan to the inclusive scan by "shifting" to the left and restoring the max
 #pragma omp single
         {
-            in.push_back(temp);
             in.erase(in.begin());
+            in.emplace_back(temp);
         }
     }
 }

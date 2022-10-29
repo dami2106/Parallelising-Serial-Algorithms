@@ -209,38 +209,39 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
     //Variables needed throughout the up sweep and down sweep
     //d, k are loop variables, inc is an increment variable for the loop
     //ind1 & ind2 are the variables used to index the array
-    int d, k, inc, ind1, ind2, i, t, maxNum;
+    int d, k, ind1, ind2, i, t, maxNum, shift1, shift2;
 
     //Up-sweep part of the algorithm
     for (d = 0; d < (int) log2(N); d++) {
+        shift1 = 1 << d;
 
         //Make sure index 1 is within the sub array
-        if (pow(2, d) < localN) {
-            inc = (int) pow(2, d + 1); //Store the incremebt in a variable
+        if (shift1 < localN) {
+            shift2 = 1 << (d + 1); //Store the incremebt in a variable
             //Use a tree traversal for the local array
-            for (k = 0; k < localN - 1; k += inc) {
-                ind2 = k + inc - 1;
-                ind1 = k + (int) pow(2, d) - 1;
+            for (k = 0; k < localN - 1; k += shift2) {
+                ind2 = k + shift2 - 1;
+                ind1 = k + shift1 - 1;
                 localIn[ind2] += localIn[ind1];
             }
 
-        } else if (pow(2, d) == localN) { //If the index is the end element in the last array
+        } else if (shift1 == localN) { //If the index is the end element in the last array
             //For down sweep, modulus is used to communicate the end values to the next neighour but only for select nodes
-            if (threadID % 2 == 0) {
+            if ((threadID & 1) == 0) {
                 MPI_Send(&localIn[localN - 1], 1, MPI_INT, threadID + 1, 0, MPI_COMM_WORLD);
             } else {
                 MPI_Recv(&ind2, 1, MPI_INT, threadID - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 localIn[localN - 1] += ind2; //Increment the value by the recieved value
             }
-        } else if (pow(2, d) > localN) { //if the index is beyond the current array size
+        } else if (shift1 > localN) { //if the index is beyond the current array size
             //Increase the counts needed (this ensures not every thread will
             //communicate but rather only those in the tree traversal)
             count++;
-            int tmp = pow(2, count - 1); //Temporary increment variable
+            int tmp = 1 << (count-1); //Temporary increment variable
 
             //Modulus is used again to determine which thread to send to (again to conform to that tree structure)
-            if (threadID % tmp == tmp - 1) {
-                if ((threadID / tmp) % 2 == 0) {
+            if ((threadID & (tmp-1)) == tmp-1) {
+                if (((threadID / tmp) & 1) == 0) {
                     MPI_Send(&localIn[localN - 1], 1, MPI_INT, threadID + tmp, 0, MPI_COMM_WORLD);
                 } else {
                     MPI_Recv(&ind2, 1, MPI_INT, threadID - tmp, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -262,21 +263,22 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
     int sCount = log2(threadCount); //Get the height of the local tree (used for the selective communication)
     //Start the local tree exploration
     for (d = log2(N) - 1; d >= 0; --d) {
-        if (pow(2, d) < localN) {
-            inc = (int) pow(2, d + 1);
-            for (i = 0; i < localN - 1; i += inc) {
-                t = localIn[i + pow(2, d) - 1];
-                localIn[i + pow(2, d) - 1] = localIn[i + pow(2, d + 1) - 1];
-                localIn[i + pow(2, d + 1) - 1] = t + localIn[i + pow(2, d + 1) - 1];
+        shift1 = 1 << d;
+        if (shift1 < localN) {
+            shift2 = 1 << (d+1);
+            for (i = 0; i < localN - 1; i += shift2) {
+                t = localIn[i + shift1 - 1];
+                localIn[i + shift1 - 1] = localIn[i + shift2 - 1];
+                localIn[i + shift2 - 1] = t + localIn[i + shift2 - 1];
             }
             //Same as above, checking where in relation to the localN the index is
-        } else if (pow(2, d) == localN) {
-            int tmp = pow(2, sCount - 1); //Temp variable for the increment
-            if (threadID % tmp == tmp - 1) { //Use modulus to determine the selective communications
+        } else if (shift1 == localN) {
+            int tmp = 1 << (sCount - 1); //Temp variable for the increment
+            if ((threadID & (tmp-1)) == tmp-1) { //Use modulus to determine the selective communications
                 int copyNum = 0; //Define a variable to save the value that gets overwritten in the down sweep when the values get swapped
                 int destinationThread = 0;
                 //Use modulus again to determine the send and receive pairs
-                if ((threadID / tmp) % 2 == 0) {
+                if (((threadID / tmp) & 1) == 0) {
                     destinationThread = threadID + tmp;
                 } else {
                     destinationThread = threadID - tmp;
@@ -284,7 +286,7 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
                 //Use a single sendrecv in order to avoid a possible deadlock
                 MPI_Sendrecv(&localIn[localN - 1], 1, MPI_INT, destinationThread, 0, &copyNum, 1, MPI_INT,
                              destinationThread, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                if ((threadID / tmp) % 2 == 0) {
+                if (((threadID / tmp) & 1) == 0) {
                     localIn[localN - 1] = copyNum; //Repalce the left value of the communcation with the right
                 } else {
                     localIn[localN - 1] = copyNum + localIn[localN - 1]; //Add the left value to the right balue and store in the right
@@ -292,22 +294,22 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
             }
             sCount--;
             //If the index lies outside the local array
-        } else if (pow(2, d) > localN) {
-            int tmp = pow(2, sCount - 1);
+        } else if (shift1 > localN) {
+            int tmp = 1 << (sCount - 1);
             //Again, use a modulus to denote the spcific tree-like communication
-            if (threadID % tmp == tmp - 1) {
+            if ((threadID & (tmp-1)) == tmp-1) {
                 int copyNum = 0;
                 int destinationThread = 0;
-                if ((threadID / tmp) % 2 == 0) {
+                if (((threadID / tmp) & 1) == 0) {
                     destinationThread = threadID + tmp;
                 } else {
                     destinationThread = threadID - tmp;
                 }
-                //Use a send and recieve pair to send the elements
+                //Use a send and receive pair to send the elements
                 MPI_Sendrecv(&localIn[localN - 1], 1, MPI_INT, destinationThread, 0, &copyNum, 1, MPI_INT,
                              destinationThread, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 //Swap the elements around and increase the right element by the left element
-                if ((threadID / tmp) % 2 == 0) {
+                if (((threadID / tmp) & 1) == 0) {
                     localIn[localN - 1] = copyNum;
                 } else {
                     localIn[localN - 1] = copyNum + localIn[localN - 1];
