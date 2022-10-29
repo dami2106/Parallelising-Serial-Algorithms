@@ -7,9 +7,13 @@
 #include <mpi.h>
 
 std::vector<int> generateArray(int N);
+
 void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
+
 void mpiFullScan(std::vector<int> &in, int N);
-void checkInput(const std::string& arrSize, int threadCount);
+
+void checkInput(const std::string &arrSize, int threadCount);
+
 void mpiBlellochScan(std::vector<int> &in, int N);
 
 int main(int argc, char *argv[]) {
@@ -54,28 +58,26 @@ int main(int argc, char *argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     //Start the parallel timer using 1 thread
-    if(id == 0)
+    if (id == 0)
         startTime = MPI_Wtime();
 
     //Call the parallel full scan implementation
     mpiFullScan(in, N);
 
     //Stop the timer
-    if(id == 0)
+    if (id == 0)
         parRuntime = MPI_Wtime() - startTime;
 
     //Start the parallel timer using 1 thread
-    if(id == 0)
+    if (id == 0)
         startTime = MPI_Wtime();
 
     //Call the parallel full scan implementation
     mpiBlellochScan(blellochIn, N);
 
     //Stop the timer
-    if(id == 0)
+    if (id == 0)
         bleRunTime = MPI_Wtime() - startTime;
-
-
 
 
     if (id == 0) {
@@ -101,7 +103,7 @@ int main(int argc, char *argv[]) {
 /*
  * Checks if the provided argument is correct, exits if it isn't
  */
-void checkInput(const std::string& arrSize, int threadCount) {
+void checkInput(const std::string &arrSize, int threadCount) {
     if (pow(2, stoi(arrSize)) < threadCount) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
     if (stoi(arrSize) < 3 || stoi(arrSize) > 28) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
 }
@@ -237,10 +239,10 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
             //Increase the counts needed (this ensures not every thread will
             //communicate but rather only those in the tree traversal)
             count++;
-            int tmp = 1 << (count-1); //Temporary increment variable
+            int tmp = 1 << (count - 1); //Temporary increment variable
 
             //Modulus is used again to determine which thread to send to (again to conform to that tree structure)
-            if ((threadID & (tmp-1)) == tmp-1) {
+            if ((threadID & (tmp - 1)) == tmp - 1) {
                 if (((threadID / tmp) & 1) == 0) {
                     MPI_Send(&localIn[localN - 1], 1, MPI_INT, threadID + tmp, 0, MPI_COMM_WORLD);
                 } else {
@@ -265,7 +267,7 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
     for (d = log2(N) - 1; d >= 0; --d) {
         shift1 = 1 << d;
         if (shift1 < localN) {
-            shift2 = 1 << (d+1);
+            shift2 = 1 << (d + 1);
             for (i = 0; i < localN - 1; i += shift2) {
                 t = localIn[i + shift1 - 1];
                 localIn[i + shift1 - 1] = localIn[i + shift2 - 1];
@@ -274,7 +276,7 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
             //Same as above, checking where in relation to the localN the index is
         } else if (shift1 == localN) {
             int tmp = 1 << (sCount - 1); //Temp variable for the increment
-            if ((threadID & (tmp-1)) == tmp-1) { //Use modulus to determine the selective communications
+            if ((threadID & (tmp - 1)) == tmp - 1) { //Use modulus to determine the selective communications
                 int copyNum = 0; //Define a variable to save the value that gets overwritten in the down sweep when the values get swapped
                 int destinationThread = 0;
                 //Use modulus again to determine the send and receive pairs
@@ -289,7 +291,8 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
                 if (((threadID / tmp) & 1) == 0) {
                     localIn[localN - 1] = copyNum; //Repalce the left value of the communcation with the right
                 } else {
-                    localIn[localN - 1] = copyNum + localIn[localN - 1]; //Add the left value to the right balue and store in the right
+                    localIn[localN - 1] = copyNum + localIn[localN -
+                                                            1]; //Add the left value to the right balue and store in the right
                 }
             }
             sCount--;
@@ -297,7 +300,7 @@ void mpiBlellochScan(std::vector<int> &in, int N) {
         } else if (shift1 > localN) {
             int tmp = 1 << (sCount - 1);
             //Again, use a modulus to denote the spcific tree-like communication
-            if ((threadID & (tmp-1)) == tmp-1) {
+            if ((threadID & (tmp - 1)) == tmp - 1) {
                 int copyNum = 0;
                 int destinationThread = 0;
                 if (((threadID / tmp) & 1) == 0) {

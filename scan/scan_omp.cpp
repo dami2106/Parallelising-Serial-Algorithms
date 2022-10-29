@@ -105,7 +105,6 @@ void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N) {
 }
 
 
-
 /*
  * A function that performs a work efficient blelloch scan on the array
  */

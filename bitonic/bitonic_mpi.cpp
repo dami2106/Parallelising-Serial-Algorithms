@@ -111,10 +111,11 @@ void parallelBitonic(std::vector<int> &arr, int N) {
 
                 std::vector<int> mArr(divideNumbers, 0);
                 //find the thread difference with the current iteration number of bitonic sorting
+                //division is thread number difference and determines which division is the current thread on
                 int division = pow(2, j) / divideNumbers;
                 int destinationThread = 0;
 
-                //decide whether the thread send forward or backward
+                //decision determines whether current thread has to communicate forwards or backwards
                 int decision = (int) threadID / division;
                 if (decision % 2 == 0) {
                     destinationThread = threadID + division;
@@ -123,10 +124,11 @@ void parallelBitonic(std::vector<int> &arr, int N) {
                 }
 
                 //Communicate the arrays between the threads
+                //Send mpiArr data to destinationThread and receive mpiArr data to copyArr from destinationThread
                 MPI_Sendrecv(mpiArr.data(), divideNumbers, MPI_INT, destinationThread, 0, mArr.data(), divideNumbers,
                              MPI_INT, destinationThread, 0, MPI_COMM_WORLD, &status);
 
-                //Decide if the array is increasing or decreasing
+                //Get multiple of both threads to decide whether they are increasing or decreasing
                 int multiple = pow(-1, (int) ((threadID * divideNumbers) / (pow(2, k) * 2)));
 
                 //Determine the ordering of the 2 numbers
@@ -134,7 +136,7 @@ void parallelBitonic(std::vector<int> &arr, int N) {
                     multiple = multiple * -1;
                 }
 
-                //Compare the entire array - save it into mpiArr
+                //Comparing mpiArr data to copyArr, and decide whether to swap
                 for (int i = 0; i < divideNumbers; i++) {
                     if (mpiArr[i] * (multiple) < mArr[i] * multiple) {
                         int temp = mArr[i];
@@ -169,8 +171,9 @@ void parallelBitonic(std::vector<int> &arr, int N) {
         }
     }
     // group all the data back into arr
-    MPI_Allgather(mpiArr.data(), divideNumbers, MPI_INT, mpiInstantArray.data(), divideNumbers, MPI_INT, MPI_COMM_WORLD);
-    arr=mpiInstantArray;
+    MPI_Allgather(mpiArr.data(), divideNumbers, MPI_INT, mpiInstantArray.data(), divideNumbers, MPI_INT,
+                  MPI_COMM_WORLD);
+    arr = mpiInstantArray;
 }
 
 int main(int argc, char *argv[]) {
