@@ -163,12 +163,13 @@ void parallelDijkstra(int vertexCount, vector<vector<int> > adj, vector<int> &l,
                 }
             }
 
-
-#pragma omp barrier //Synchronise threads
+//Synchronise threads
+#pragma omp barrier
 
 #pragma omp single
-            if (u != -1) vT[u] = true; //Set the current global closest vertex to visited by a single threads
+            if (u != -1) vT[u] = true; //Set the current global closest vertex to visited by a single thread
 
+            //Synchronise all threads
 #pragma omp barrier
             if (u != -1) {
                 //For each vertex in the subset of vertices, update the current min distance and update the parent
@@ -230,6 +231,8 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &f
         adj[nodeInfo[0]][nodeInfo[1]] = nodeInfo[2];
         adj[nodeInfo[1]][nodeInfo[0]] = nodeInfo[2];
     }
+    for (int i = 0; i < vertexCount; i++)
+        adj[i][i] = 0;
 
     //Close the file reader and return
     fileReader.close();

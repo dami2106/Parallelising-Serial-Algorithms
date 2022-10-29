@@ -8,7 +8,7 @@
 #include <array>
 #include <algorithm>
 
-#define NUMTHREADS 16
+#define NUMTHREADS 8
 
 std::vector<int> generateArray(int N);
 
@@ -131,8 +131,6 @@ void ompBlelloch(std::vector<int> &in, int N) {
         //The root node of the tree now holds the max sum value of the array
 
         //We then back up the end element and set it to 0 in order to do a pre scan
-
-
 #pragma omp single
         {
             temp = in[N - 1];

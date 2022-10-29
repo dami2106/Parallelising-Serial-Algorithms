@@ -9,13 +9,13 @@
 std::vector<int> generateArray(int N);
 void serialFullScan(std::vector<int> &in, std::vector<int> &out, int N);
 void mpiFullScan(std::vector<int> &in, int N);
-void checkInput(std::string arrSize, int threadCount);
+void checkInput(const std::string& arrSize, int threadCount);
 void mpiBlellochScan(std::vector<int> &in, int N);
 
 int main(int argc, char *argv[]) {
     //Get the size of the array from the parameters
     int N = (int) pow(2, atoi(argv[1]));
-    int id, P; //Stores the ID of the current thread
+    int id, P; //Stores the ID of the current thread and number of threads
 
     //Set the variables used for timing
     double startTime, serRuntime = 0, parRuntime = 0, bleRunTime = 0;
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
 /*
  * Checks if the provided argument is correct, exits if it isn't
  */
-void checkInput(std::string arrSize, int threadCount) {
+void checkInput(const std::string& arrSize, int threadCount) {
     if (pow(2, stoi(arrSize)) < threadCount) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
     if (stoi(arrSize) < 3 || stoi(arrSize) > 28) std::cout << "INCORRECT ARRAY SIZE\n", exit(1);
 }

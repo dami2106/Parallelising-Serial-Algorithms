@@ -278,6 +278,8 @@ vector<vector<int> > makeGraph(int &vertexCount, int &edgeCount, const string &f
         adj[nodeInfo[0]][nodeInfo[1]] = nodeInfo[2];
         adj[nodeInfo[1]][nodeInfo[0]] = nodeInfo[2];
     }
+    for(int i = 0 ; i < vertexCount ; i++)
+        adj[i][i] = 0;
 
     //Close the file reader and return
     fileReader.close();

@@ -89,12 +89,14 @@ void parallelBitonic(std::vector<int> &arr, int N) {
     //Get the thread rank and count
     MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
+    MPI_Status status;
 
-    // divideNUmbers represents the numbers of element get in each thread
+    // divideNumbers represents the numbers of element get in each thread
     int divideNumbers = N / threadCount;
 
     // create a temporary vector with numbers required in each threads
     std::vector<int> mpiArr(divideNumbers, 0);
+    std::vector<int> mpiInstantArray(N, 0);
 
     // Distribute the arr data equally to mpiArr, so each thread will get divideNumbers of elements
     MPI_Scatter(arr.data(), divideNumbers, MPI_INT, mpiArr.data(), divideNumbers, MPI_INT, 0, MPI_COMM_WORLD);
@@ -105,12 +107,14 @@ void parallelBitonic(std::vector<int> &arr, int N) {
         for (int j = k; j >= 0; --j) {
             // if elements in the thread requires another elements in other thread(mpi sendRec)
             if ((2 * pow(2, j)) > divideNumbers) {
-                //initaliszed a copy array to receive the data from another threads
-                std::vector<int> copyArr(divideNumbers, 0);
-                //division is thread number difference and determine which division is current thread on
+                //initialized a copy array to receive the data from another threads
+
+                std::vector<int> mArr(divideNumbers, 0);
+                //find the thread difference with the current iteration number of bitonic sorting
                 int division = pow(2, j) / divideNumbers;
                 int destinationThread = 0;
-                //decision is determine whether current thread has to communicate forward or backward
+
+                //decide whether the thread send forward or backward
                 int decision = (int) threadID / division;
                 if (decision % 2 == 0) {
                     destinationThread = threadID + division;
@@ -118,20 +122,22 @@ void parallelBitonic(std::vector<int> &arr, int N) {
                     destinationThread = threadID - division;
                 }
 
-                // send mpiArr data to destinationThread and receive mpiArr data to copyArr from destinationThread
-                MPI_Sendrecv(mpiArr.data(), divideNumbers, MPI_INT, destinationThread, 0, copyArr.data(), divideNumbers,
-                             MPI_INT, destinationThread, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                //Communicate the arrays between the threads
+                MPI_Sendrecv(mpiArr.data(), divideNumbers, MPI_INT, destinationThread, 0, mArr.data(), divideNumbers,
+                             MPI_INT, destinationThread, 0, MPI_COMM_WORLD, &status);
 
-                //get multiple of both thread whether they are increasing or decreasing
+                //Decide if the array is increasing or decreasing
                 int multiple = pow(-1, (int) ((threadID * divideNumbers) / (pow(2, k) * 2)));
-                //if curent thread number is less than destination thread number, we mutiply multiple by -1
+
+                //Determine the ordering of the 2 numbers
                 if (threadID < destinationThread) {
                     multiple = multiple * -1;
                 }
-                //comparing mpiArr data to copyArr, and decide whether to swap
+
+                //Compare the entire array - save it into mpiArr
                 for (int i = 0; i < divideNumbers; i++) {
-                    if (mpiArr[i] * (multiple) < copyArr[i] * multiple) {
-                        int temp = copyArr[i];
+                    if (mpiArr[i] * (multiple) < mArr[i] * multiple) {
+                        int temp = mArr[i];
                         mpiArr[i] = temp;
                     }
                 }
@@ -163,13 +169,14 @@ void parallelBitonic(std::vector<int> &arr, int N) {
         }
     }
     // group all the data back into arr
-    MPI_Allgather(mpiArr.data(), divideNumbers, MPI_INT, arr.data(), divideNumbers, MPI_INT, MPI_COMM_WORLD);
+    MPI_Allgather(mpiArr.data(), divideNumbers, MPI_INT, mpiInstantArray.data(), divideNumbers, MPI_INT, MPI_COMM_WORLD);
+    arr=mpiInstantArray;
 }
 
 int main(int argc, char *argv[]) {
 
-    // //Check the input array size is correct
-    // //checkInput(argv[1], threadCount);
+    //Check the input array size is correct
+    //checkInput(argv[1], threadCount);
 
     //Get the size of the array from the parameters
     int N = (int) pow(2, atoi(argv[1]));
@@ -182,6 +189,7 @@ int main(int argc, char *argv[]) {
     std::vector<int> arr;
     //copy the input array into serialArr for serial bitonic
     std::vector<int> seiralArr;
+
     //Start MPI
     MPI_Init(NULL, NULL);
 
