@@ -86,11 +86,9 @@ void serialBitonic(std::vector<int> &arr) {
 void parallelBitonic(std::vector<int> &arr, int N) {
     int threadCount, threadID;
 
-    // Initialize MPI
-    MPI_Init(NULL, NULL);
+    //Get the thread rank and count
     MPI_Comm_rank(MPI_COMM_WORLD, &threadID);
     MPI_Comm_size(MPI_COMM_WORLD, &threadCount);
-    MPI_Status status;
 
     // divideNUmbers represents the numbers of element get in each thread
     int divideNumbers = N / threadCount;
@@ -219,9 +217,6 @@ int main(int argc, char *argv[]) {
     if (id == 0)
         parRuntime = MPI_Wtime() - startTime;
 
-    //Finalise the MPI call
-    MPI_Finalize();
-
     if (id == 0) {
         //Validate the parallel data against the serial sum array and serial parallel array
         if (arr != seiralArr) {
@@ -234,5 +229,8 @@ int main(int argc, char *argv[]) {
             std::cout << "Efficiency : " << (serRuntime / parRuntime) / P << std::endl;
         }
     }
+
+    //Finalise the MPI call
+    MPI_Finalize();
     return 0;
 }
