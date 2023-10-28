@@ -1,4 +1,4 @@
-# Parallel Computing Assignment COMS3008A
+# Parallel Computing - Parallelising Blelloch, Bitonic Sort, and Dijkstra 
 
 ### Damion &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gavin
 
