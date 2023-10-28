@@ -1,6 +1,6 @@
 # Parallel Computing Assignment COMS3008A
 
-### 2303289, Damion Harvey&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2302891, Wen Guan Gavin Chen
+### Damion &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gavin
 
 <!-- TOC -->
 
